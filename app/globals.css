@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  GlobalReach design tokens
+  Signature idea: a "shipping manifest" system — mono-set coordinate
+  and country-code chips (e.g. "41.01N 28.98E · TR") mark every lead,
+  card, and map pin, tying the product's visual language to the act
+  of locating and logging a business anywhere on the globe.
+
+  Palette
+  --primary   Route Blue    #2451FF  — the line a rep draws to a lead
+  --accent    Compass Amber #F2A93B  — flags, priority, follow-ups
+  --success   Ledger Green  #189A6B  — won deals
+  --danger    Manifest Red  #E5484D  — lost / at risk
+  --ink       #12141C (light) / #EDEFF3 (dark)
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --surface: 220 20% 97%;
+    --foreground: 222 27% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 27% 8%;
+    --border: 220 16% 89%;
+    --muted: 220 20% 95%;
+    --muted-foreground: 220 9% 42%;
+    --primary: 228 100% 57%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 37 86% 58%;
+    --accent-foreground: 30 40% 14%;
+    --success: 160 71% 33%;
+    --success-foreground: 0 0% 100%;
+    --danger: 358 75% 59%;
+    --danger-foreground: 0 0% 100%;
+    --ring: 228 100% 57%;
+    --radius: 10px;
+  }
+
+  .dark {
+    --background: 224 33% 6%;
+    --surface: 223 28% 9%;
+    --foreground: 220 20% 94%;
+    --card: 223 28% 9%;
+    --card-foreground: 220 20% 94%;
+    --border: 222 20% 17%;
+    --muted: 222 22% 13%;
+    --muted-foreground: 220 12% 62%;
+    --primary: 228 100% 64%;
+    --primary-foreground: 224 33% 6%;
+    --accent: 37 90% 60%;
+    --accent-foreground: 30 40% 10%;
+    --success: 160 62% 42%;
+    --success-foreground: 224 33% 6%;
+    --danger: 358 75% 63%;
+    --danger-foreground: 224 33% 6%;
+    --ring: 228 100% 64%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-surface text-foreground font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    @apply bg-primary/20;
+  }
+
+  /* Visible keyboard focus everywhere, no exceptions */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Coordinate / manifest chip — the signature data mark used across
+     client cards, map pins, and profile headers. */
+  .manifest-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 999px;
+  }
+}
