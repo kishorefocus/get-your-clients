@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTheme } from "@/lib/hooks/use-theme";
 
-export function Topbar({ title }: { title: string }) {
+export function Topbar({ title, actions }: { title: string; actions?: React.ReactNode }) {
   const { theme, toggle } = useTheme();
 
   return (
@@ -13,6 +13,7 @@ export function Topbar({ title }: { title: string }) {
       <h1 className="font-display text-[19px] font-semibold tracking-tight">{title}</h1>
 
       <div className="flex items-center gap-2">
+        {actions && <>{actions}</>}
         <button
           onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
           className="hidden items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted sm:flex"
