@@ -42,7 +42,13 @@ export function FunnelChart() {
             }}
             formatter={(v: number, name: string) => [v, "Leads"]}
           />
-          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+          <Bar 
+            dataKey="count" 
+            radius={[4, 4, 0, 0]}
+            isAnimationActive={true}
+            animationDuration={1000}
+            animationEasing="ease-out"
+          >
             {funnelData.map((entry, index) => (
               <Cell key={index} fill={entry.color} />
             ))}

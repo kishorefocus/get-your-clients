@@ -43,8 +43,8 @@ export function CountryBreakdown() {
             }}
           />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-          <Bar dataKey="leads" name="Leads" fill="hsl(228 100% 57%)" radius={[0, 4, 4, 0]} />
-          <Bar dataKey="won" name="Won" fill="hsl(160 71% 33%)" radius={[0, 4, 4, 0]} />
+          <Bar dataKey="leads" name="Leads" fill="hsl(228 100% 57%)" radius={[0, 4, 4, 0]} isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" />
+          <Bar dataKey="won" name="Won" fill="hsl(160 71% 33%)" radius={[0, 4, 4, 0]} isAnimationActive={true} animationDuration={1000} animationEasing="ease-out" />
         </BarChart>
       </ResponsiveContainer>
     </div>

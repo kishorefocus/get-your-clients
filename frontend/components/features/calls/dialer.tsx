@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Delete, PhoneCall } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { tapProps } from "@/lib/motion";
 
 const keys = [
   ["1", ""], ["2", "ABC"], ["3", "DEF"],
@@ -27,40 +29,57 @@ export function Dialer({ onCall }: Props) {
       <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider">New Call</h3>
 
       {/* Number display */}
-      <div className="relative flex w-full items-center justify-center">
-        <span className={cn("font-mono text-2xl font-semibold tracking-widest min-h-[36px]", !number && "text-muted-foreground")}>
-          {number || "+1 (555) …"}
-        </span>
+      <div className="relative flex w-full items-center justify-center h-9">
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={number || "empty"}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.1 }}
+            className={cn("font-mono text-2xl font-semibold tracking-widest min-h-[36px]", !number && "text-muted-foreground")}
+          >
+            {number || "+1 (555) …"}
+          </motion.span>
+        </AnimatePresence>
         {number && (
-          <button onClick={backspace} className="absolute right-0 p-1 text-muted-foreground hover:text-foreground">
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={backspace}
+            className="absolute right-0 p-1 text-muted-foreground hover:text-foreground focus-visible:outline-ring"
+          >
             <Delete className="h-4 w-4" />
-          </button>
+          </motion.button>
         )}
       </div>
 
       {/* Keypad */}
       <div className="grid grid-cols-3 gap-2 w-full">
         {keys.map(([digit, sub]) => (
-          <button
+          <motion.button
             key={digit + sub}
             onClick={() => press(digit)}
-            className="flex flex-col items-center justify-center h-12 rounded-lg border border-border bg-background hover:bg-muted transition-colors active:scale-95"
+            {...tapProps}
+            className="flex flex-col items-center justify-center h-12 rounded-lg border border-border bg-background hover:bg-muted transition-colors focus-visible:outline-ring"
           >
             <span className="text-base font-semibold">{digit}</span>
             {sub && <span className="text-[8px] font-medium text-muted-foreground tracking-widest">{sub}</span>}
-          </button>
+          </motion.button>
         ))}
       </div>
 
       {/* Call button */}
-      <Button
-        className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground"
-        onClick={() => number && onCall(number)}
-        disabled={!number}
-      >
-        <PhoneCall className="h-4 w-4" />
-        Call
-      </Button>
+      <motion.div {...tapProps} className="w-full">
+        <Button
+          className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-subtle focus-visible:outline-ring"
+          onClick={() => number && onCall(number)}
+          disabled={!number}
+        >
+          <PhoneCall className="h-4 w-4" />
+          Call
+        </Button>
+      </motion.div>
     </div>
   );
 }

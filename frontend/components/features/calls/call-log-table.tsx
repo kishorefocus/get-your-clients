@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Mic, Play, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { ActiveCallOverlay } from "./active-call-overlay";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainerFast, staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
 
 function outcomeIcon(outcome: CallLog["outcome"], direction: CallLog["direction"]) {
   if (outcome === "no-answer" || outcome === "busy" || outcome === "failed")
@@ -34,14 +35,26 @@ export function CallLogTable({ onStartCall }: Props) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-subtle">
-      <div className="flex h-11 items-center border-b border-border px-4">
+      <div className="flex h-11 items-center border-b border-border px-4 bg-muted/20 justify-between">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Recent Calls ({mockCallLogs.length})
+          Recent Calls
+        </span>
+        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          {mockCallLogs.length}
         </span>
       </div>
-      <div className="divide-y divide-border">
+      <motion.div
+        variants={staggerContainerFast}
+        initial="hidden"
+        animate="visible"
+        className="divide-y divide-border"
+      >
         {mockCallLogs.map((log) => (
-          <div key={log.id} className="group px-4 py-3 hover:bg-muted/40 transition-colors">
+          <motion.div
+            key={log.id}
+            variants={staggerChild}
+            className="group px-4 py-3 hover:bg-muted/30 transition-colors duration-150 relative"
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
                 {outcomeIcon(log.outcome, log.direction)}
@@ -64,41 +77,59 @@ export function CallLogTable({ onStartCall }: Props) {
                   {log.outcome.replace("-", " ")}
                 </Badge>
                 {log.hasRecording && (
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" title="Play recording">
-                    <Play className="h-3.5 w-3.5" />
-                  </Button>
+                  <motion.div {...tapProps}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" title="Play recording">
+                      <Play className="h-3.5 w-3.5" />
+                    </Button>
+                  </motion.div>
                 )}
                 {log.notes && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-muted-foreground"
-                    onClick={() => setExpandedNote(expandedNote === log.id ? null : log.id)}
-                    title="View notes"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                  </Button>
+                  <motion.div {...tapProps}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => setExpandedNote(expandedNote === log.id ? null : log.id)}
+                      title="View notes"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </Button>
+                  </motion.div>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 gap-1.5 px-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={() => onStartCall(log)}
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  Call back
-                </Button>
+                <motion.div {...tapProps}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1.5 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100"
+                    onClick={() => onStartCall(log)}
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    Call back
+                  </Button>
+                </motion.div>
               </div>
             </div>
-            {expandedNote === log.id && log.notes && (
-              <div className="mt-2 ml-12 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border">
-                <p className="font-semibold text-foreground mb-0.5">Call notes</p>
-                {log.notes}
-              </div>
-            )}
-          </div>
+
+            {/* Smooth Expand height notes panel */}
+            <AnimatePresence initial={false}>
+              {expandedNote === log.id && log.notes && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                  animate={{ height: "auto", opacity: 1, marginTop: 8 }}
+                  exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                  transition={{ duration: 0.22, ease: EASE_OUT }}
+                  className="overflow-hidden"
+                >
+                  <div className="ml-12 rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground border border-border/80">
+                    <p className="font-semibold text-foreground mb-0.5">Call notes</p>
+                    {log.notes}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }

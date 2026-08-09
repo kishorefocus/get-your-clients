@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerChild } from "@/lib/motion";
 
 interface NotifItem {
   id: string;
@@ -45,16 +47,21 @@ export function NotificationsTab() {
   const toggle = (id: string) => setSettings((s) => ({ ...s, [id]: !s[id] }));
 
   return (
-    <div className="max-w-lg space-y-6">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="max-w-lg space-y-6"
+    >
       {notifGroups.map((group, gi) => (
-        <div key={group.group}>
+        <motion.div variants={staggerChild} key={group.group}>
           {gi > 0 && <Separator className="mb-6" />}
           <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {group.group}
           </h3>
           <div className="space-y-4">
             {group.items.map((item) => (
-              <div key={item.id} className="flex items-start justify-between gap-4">
+              <div key={item.id} className="flex items-start justify-between gap-4 py-1">
                 <div className="flex-1">
                   <p className="text-sm font-medium">{item.label}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{item.description}</p>
@@ -67,8 +74,8 @@ export function NotificationsTab() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

@@ -7,6 +7,8 @@ import { KanbanCard } from "@/components/features/pipeline/kanban-card";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { PipelineStage } from "@/types";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { staggerContainer, dragOverlayStyle } from "@/lib/motion";
 
 const stages: PipelineStage[] = ["new", "contacted", "responded", "negotiating", "won", "lost"];
 
@@ -31,18 +33,37 @@ export function KanbanBoard() {
     const lead = leads.find((l) => l.id === active.id);
     if (!lead || lead.stage === newStage) return;
     setStage(lead.id, newStage);
-    toast.success(`${lead.name} moved to ${newStage}`);
+    
+    if (newStage === "won") {
+      toast.success(`🎉 Spectacular! ${lead.name} won!`);
+    } else {
+      toast.success(`${lead.name} moved to ${newStage}`);
+    }
   }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex h-full gap-4 overflow-x-auto p-4 scrollbar-thin">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="flex h-full gap-4 overflow-x-auto p-4 scrollbar-thin"
+      >
         {stages.map((stage) => (
           <KanbanColumn key={stage} stage={stage} leads={leads.filter((l) => l.stage === stage)} />
         ))}
-      </div>
+      </motion.div>
 
-      <DragOverlay>{activeLead ? <div className="w-72"><KanbanCard lead={activeLead} /></div> : null}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeLead ? (
+          <motion.div 
+            style={dragOverlayStyle}
+            className="w-72 cursor-grabbing pointer-events-none"
+          >
+            <KanbanCard lead={activeLead} isOverlay />
+          </motion.div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

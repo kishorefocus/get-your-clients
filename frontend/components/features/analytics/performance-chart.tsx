@@ -47,6 +47,9 @@ export function PerformanceChart() {
             stroke="hsl(228 100% 57%)"
             strokeWidth={2}
             fill="url(#gradOut)"
+            isAnimationActive={true}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
           <Area
             type="monotone"
@@ -55,6 +58,9 @@ export function PerformanceChart() {
             stroke="hsl(160 71% 33%)"
             strokeWidth={2}
             fill="url(#gradResp)"
+            isAnimationActive={true}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

@@ -8,6 +8,8 @@ import { mockTeam } from "@/lib/mock/team";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Users, Shield, Briefcase } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerChild, cardHoverProps } from "@/lib/motion";
 
 const roleCounts = mockTeam.reduce(
   (acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; },
@@ -29,35 +31,47 @@ export default function TeamPage() {
       <Topbar
         title="Team"
         actions={
-          <Button onClick={() => setInviteOpen(true)} size="sm" className="gap-2">
+          <Button onClick={() => setInviteOpen(true)} size="sm" className="gap-2 focus-visible:outline-ring">
             <UserPlus className="h-4 w-4" /> Invite teammate
           </Button>
         }
       />
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
         {/* Org stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6"
+        >
           {orgStats.map((s) => (
-            <Card key={s.label} className="animate-fade-up">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <s.icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                  <p className="font-display text-xl font-semibold">{s.value}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div key={s.label} variants={staggerChild} {...cardHoverProps}>
+              <Card className="hover:shadow-card transition-shadow">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <s.icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{s.label}</p>
+                    <p className="font-display text-xl font-semibold">{s.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Member grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        >
           {mockTeam.map((member, i) => (
             <MemberCard key={member.id} member={member} index={i} />
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />

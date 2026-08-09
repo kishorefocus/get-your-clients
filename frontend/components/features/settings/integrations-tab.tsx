@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff, RefreshCw, CheckCircle2, XCircle, Map, Phone, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerChild, cardHoverProps, tapProps } from "@/lib/motion";
 
 interface IntegrationCard {
   id: string;
@@ -56,7 +58,11 @@ function IntCard({ integ }: { integ: IntegrationCard }) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-subtle">
+    <motion.div
+      variants={staggerChild}
+      {...cardHoverProps}
+      className="rounded-xl border border-border bg-card p-5 shadow-subtle hover:shadow-card transition-shadow"
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
@@ -103,19 +109,24 @@ function IntCard({ integ }: { integ: IntegrationCard }) {
           {testing ? "Testing…" : "Test & Save"}
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export function IntegrationsTab() {
   return (
-    <div className="space-y-4 max-w-2xl">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-4 max-w-2xl"
+    >
       <p className="text-sm text-muted-foreground">
         Connect your external services. Keys are stored encrypted and never logged.
       </p>
       {integrations.map((integ) => (
         <IntCard key={integ.id} integ={integ} />
       ))}
-    </div>
+    </motion.div>
   );
 }

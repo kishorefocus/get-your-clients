@@ -97,7 +97,31 @@
   /* Coordinate / manifest chip — the signature data mark used across
      client cards, map pins, and profile headers. */
   .manifest-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground transition-colors duration-150;
+  }
+
+  /* Skeleton loader — animated shimmer, shaped like real content */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-md;
+  }
+
+  /* Typing indicator dots */
+  .typing-dot {
+    @apply h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-typing-dot;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.16s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+  /* Celebration particle */
+  .celebrate-particle {
+    @apply absolute h-2 w-2 rounded-full animate-celebrate pointer-events-none;
   }
 
   .scrollbar-thin {
@@ -110,3 +134,18 @@
     border-radius: 999px;
   }
 }
+
+/* Ensure transform-based hover states don't lose focus rings */
+@layer utilities {
+  .hover-lift {
+    @apply transition-transform duration-200;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-0.5;
+  }
+  /* GPU hint for animated elements (use sparingly) */
+  .gpu {
+    will-change: transform, opacity;
+  }
+}
+

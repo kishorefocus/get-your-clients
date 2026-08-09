@@ -8,6 +8,8 @@ import { LeadCard } from "@/components/features/search/lead-card";
 import { MapView } from "@/components/features/search/map-view";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainerFast, fadeIn, fadeUp, springUI, tapProps } from "@/lib/motion";
 
 type ViewMode = "list" | "map" | "split";
 
@@ -49,37 +51,65 @@ export default function DiscoveryPage() {
 
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{results.length}</span> results
-              {filters.country ? ` in ${filters.country}` : " worldwide"}
-            </p>
-            <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
+            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={results.length}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.15 }}
+                  className="font-mono text-foreground font-semibold"
+                >
+                  {results.length}
+                </motion.span>
+              </AnimatePresence>
+              <span>
+                results {filters.country ? ` in ${filters.country}` : " worldwide"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
               <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
               <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
               <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1">
-            {view !== "map" && (
-              <div
-                className={cn(
-                  "min-h-0 space-y-3 overflow-y-auto p-4 scrollbar-thin",
-                  view === "split" ? "w-full max-w-md border-r border-border" : "w-full"
-                )}
-              >
-                {results.length === 0 ? (
-                  <EmptyState />
-                ) : (
-                  results.map((lead) => (
-                    <LeadCard key={lead.id} lead={lead} active={activeId === lead.id} onHover={setActiveId} onSelect={setActiveId} />
-                  ))
-                )}
-              </div>
-            )}
+          <div className="flex min-h-0 flex-1 overflow-hidden relative">
+            <AnimatePresence mode="wait">
+              {view !== "map" && (
+                <motion.div
+                  key="list-view"
+                  variants={fadeIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className={cn(
+                    "min-h-0 space-y-3 overflow-y-auto p-4 scrollbar-thin",
+                    view === "split" ? "w-full max-w-md border-r border-border bg-background/50" : "w-full"
+                  )}
+                >
+                  {results.length === 0 ? (
+                    <EmptyState key="empty" />
+                  ) : (
+                    <motion.div
+                      key="staggered-leads"
+                      variants={staggerContainerFast}
+                      initial="hidden"
+                      animate="visible"
+                      className="space-y-3"
+                    >
+                      {results.map((lead) => (
+                        <LeadCard key={lead.id} lead={lead} active={activeId === lead.id} onHover={setActiveId} onSelect={setActiveId} />
+                      ))}
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {view !== "list" && (
-              <div className="min-h-0 flex-1">
+              <div className="min-h-0 flex-1 relative bg-surface">
                 <MapView leads={results} activeId={activeId} onHover={setActiveId} onSelect={setActiveId} />
               </div>
             )}
@@ -92,28 +122,43 @@ export default function DiscoveryPage() {
 
 function ViewButton({ icon: Icon, active, onClick, label }: { icon: any; active: boolean; onClick: () => void; label: string }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      {...tapProps}
       aria-pressed={active}
       title={label}
       className={cn(
-        "flex h-7 items-center gap-1.5 rounded px-2.5 text-xs font-medium transition-colors",
-        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+        "relative flex h-7 items-center gap-1.5 rounded px-2.5 text-xs font-medium transition-colors focus-visible:outline-ring z-10",
+        active ? "text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
+      {active && (
+        <motion.span
+          layoutId="active-view-bg"
+          className="absolute inset-0 rounded bg-primary"
+          transition={springUI}
+          style={{ zIndex: -1 }}
+        />
+      )}
       <Icon className="h-3.5 w-3.5" />
       {label}
-    </button>
+    </motion.button>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
-      <p className="text-sm font-medium">No businesses match these filters</p>
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center bg-card shadow-subtle"
+    >
+      <span className="manifest-chip mb-3">0 · RESULTS</span>
+      <p className="text-sm font-semibold">No businesses match these filters</p>
       <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
         Try widening the search radius or clearing a filter to see more results.
       </p>
-    </div>
+    </motion.div>
   );
 }

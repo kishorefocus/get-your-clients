@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Check, Zap, Building2, FileText } from "lucide-react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerChild, cardHoverProps, tapProps } from "@/lib/motion";
 
 const plans = [
   {
@@ -40,16 +42,23 @@ const invoices = [
 
 export function BillingTab() {
   return (
-    <div className="space-y-8 max-w-2xl">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 max-w-2xl"
+    >
       {/* Plans */}
       <div>
         <h3 className="mb-3 text-sm font-semibold">Current Plan</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {plans.map((plan) => (
-            <div
+            <motion.div
               key={plan.name}
-              className={`relative rounded-xl border p-4 ${
-                plan.current ? "border-primary ring-2 ring-primary/20" : "border-border"
+              variants={staggerChild}
+              {...cardHoverProps}
+              className={`relative rounded-xl border p-4 hover:shadow-card transition-shadow ${
+                plan.current ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]" : "border-border bg-card"
               }`}
             >
               {plan.current && (
@@ -71,7 +80,7 @@ export function BillingTab() {
                   {plan.name === "Enterprise" ? "Contact sales" : "Upgrade"}
                 </Button>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -115,6 +124,6 @@ export function BillingTab() {
           ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
