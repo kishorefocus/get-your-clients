@@ -7,29 +7,51 @@ import { Input } from "@/components/ui/input";
 import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { scaleIn, fadeUp, staggerContainer, staggerChild, springUI } from "@/lib/motion";
+import { scaleIn, staggerContainer, staggerChild, springUI } from "@/lib/motion";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { ApiError } from "@/lib/api/client";
+import { toast } from "sonner";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const orgId = useId();
   const emailId = useId();
   const passwordId = useId();
 
-  const [state, setState] = useState<"idle" | "error" | "success">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "error" | "success">("idle");
+  const [errorMsg, setErrorMsg] = useState("Please fill in all fields. Password must be 8+ characters.");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
+    const orgName = (form.elements.namedItem("org") as HTMLInputElement).value.trim();
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const pw = (form.elements.namedItem("password") as HTMLInputElement).value;
 
-    if (!email || pw.length < 8) {
+    if (!orgName || !email || pw.length < 8) {
+      setErrorMsg("Please fill in all fields. Password must be 8+ characters.");
       setState("error");
       return;
     }
 
-    setState("success");
-    setTimeout(() => router.push("/dashboard"), 1400);
+    setState("loading");
+    try {
+      await register({ org_name: orgName, email, password: pw });
+      setState("success");
+      setTimeout(() => router.push("/dashboard"), 1400);
+    } catch (err) {
+      let msg = "Something went wrong. Please try again.";
+      if (err instanceof ApiError) {
+        if (err.status === 409) msg = "An account with that email already exists.";
+        else if (err.status === 422) msg = "Please check your details and try again.";
+        else if (err.status >= 500) msg = "Server error — please try again shortly.";
+        else msg = err.detail;
+      }
+      setErrorMsg(msg);
+      setState("error");
+      toast.error(msg);
+    }
   };
 
   return (
@@ -114,7 +136,13 @@ export default function SignupPage() {
                   >
                     Company name
                   </label>
-                  <Input id={orgId} name="org" placeholder="Acme Exports" />
+                  <Input
+                    id={orgId}
+                    name="org"
+                    placeholder="Acme Exports"
+                    disabled={state === "loading"}
+                    className={state === "error" ? "border-danger/60" : ""}
+                  />
                 </motion.div>
 
                 <motion.div variants={staggerChild}>
@@ -129,6 +157,7 @@ export default function SignupPage() {
                     name="email"
                     type="email"
                     placeholder="you@company.com"
+                    disabled={state === "loading"}
                     className={state === "error" ? "border-danger/60" : ""}
                   />
                 </motion.div>
@@ -145,6 +174,7 @@ export default function SignupPage() {
                     name="password"
                     type="password"
                     placeholder="At least 8 characters"
+                    disabled={state === "loading"}
                     className={state === "error" ? "border-danger/60" : ""}
                   />
                 </motion.div>
@@ -158,15 +188,20 @@ export default function SignupPage() {
                       exit={{ opacity: 0, height: 0 }}
                       className="text-xs text-danger"
                     >
-                      Please fill in all fields. Password must be 8+ characters.
+                      {errorMsg}
                     </motion.p>
                   )}
                 </AnimatePresence>
 
                 <motion.div variants={staggerChild}>
                   <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button type="submit" className="w-full" size="lg">
-                      Create account
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="lg"
+                      disabled={state === "loading"}
+                    >
+                      {state === "loading" ? "Creating account…" : "Create account"}
                     </Button>
                   </motion.div>
                 </motion.div>

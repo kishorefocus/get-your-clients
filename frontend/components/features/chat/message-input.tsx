@@ -8,16 +8,42 @@ import { cannedResponses } from "@/lib/mock/conversations";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { tapProps } from "@/lib/motion";
+import { buildWsUrl } from "@/lib/api/client";
 
+// Module-level WeakMap won't work across re-renders; use a simple singleton ref per page.
+// The WS is owned by useChatThread — MessageInput just needs to try to send via it.
+// We share a ws ref by reading from the global threadIds map in the store.
 export function MessageInput() {
   const [text, setText] = useState("");
   const [showCanned, setShowCanned] = useState(false);
-  const { activeConversationId, sendMessage } = useChatStore();
+  const { activeConversationId, sendMessage, threadIds } = useChatStore();
+  const wsRef = useRef<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = () => {
     if (!activeConversationId || !text.trim()) return;
-    sendMessage(activeConversationId, text);
+    const body = text.trim();
+
+    // Try real WebSocket if we have a thread ID for this conversation
+    const threadId = threadIds[activeConversationId];
+    if (threadId) {
+      // Reuse or open a WS connection
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        wsRef.current = new WebSocket(buildWsUrl(`/ws/chat/${threadId}`));
+      }
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ body }));
+        // Add optimistic message to store immediately
+        sendMessage(activeConversationId, body);
+        setText("");
+        setShowCanned(false);
+        textareaRef.current?.focus();
+        return;
+      }
+    }
+
+    // Fallback: mock optimistic send
+    sendMessage(activeConversationId, body);
     setText("");
     setShowCanned(false);
     textareaRef.current?.focus();
@@ -43,7 +69,7 @@ export function MessageInput() {
 
   return (
     <div className="shrink-0 border-t border-border bg-background p-3">
-      {/* Canned responses dropdown with motion */}
+      {/* Canned responses dropdown */}
       <AnimatePresence>
         {showCanned && (
           <motion.div
@@ -100,7 +126,7 @@ export function MessageInput() {
               <Zap className="h-4 w-4" />
             </Button>
           </motion.div>
-          
+
           <motion.div {...tapProps}>
             <Button
               variant="ghost"

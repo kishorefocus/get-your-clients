@@ -7,32 +7,52 @@ import { Input } from "@/components/ui/input";
 import { useState, useId } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { scaleIn, fadeUp, staggerContainer, staggerChild, springUI } from "@/lib/motion";
+import { scaleIn, staggerContainer, staggerChild, springUI } from "@/lib/motion";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { ApiError } from "@/lib/api/client";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const prefersReduced = useReducedMotion();
   const router = useRouter();
+  const { login } = useAuth();
   const emailId = useId();
   const passwordId = useId();
 
-  const [state, setState] = useState<"idle" | "error" | "success">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "error" | "success">("idle");
+  const [errorMsg, setErrorMsg] = useState("Invalid email or password. Please try again.");
   const [shakeKey, setShakeKey] = useState(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const pw = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     if (!email || !pw || pw.length < 4) {
+      setErrorMsg("Please enter your email and password.");
       setState("error");
-      setShakeKey((k) => k + 1); // re-trigger shake animation
+      setShakeKey((k) => k + 1);
       return;
     }
 
-    // Simulate success → redirect
-    setState("success");
-    setTimeout(() => router.push("/dashboard"), 1400);
+    setState("loading");
+    try {
+      await login({ email, password: pw });
+      setState("success");
+      setTimeout(() => router.push("/dashboard"), 1400);
+    } catch (err) {
+      let msg = "Invalid email or password. Please try again.";
+      if (err instanceof ApiError) {
+        if (err.status === 401) msg = "Invalid email or password.";
+        else if (err.status >= 500) msg = "Server error — please try again shortly.";
+        else msg = err.detail;
+      }
+      setErrorMsg(msg);
+      setState("error");
+      setShakeKey((k) => k + 1);
+      toast.error(msg);
+    }
   };
 
   return (
@@ -130,6 +150,7 @@ export default function LoginPage() {
                     name="email"
                     type="email"
                     placeholder="you@company.com"
+                    disabled={state === "loading"}
                     className={state === "error" ? "border-danger/60 focus-visible:ring-danger/30" : ""}
                   />
                 </motion.div>
@@ -151,6 +172,7 @@ export default function LoginPage() {
                     name="password"
                     type="password"
                     placeholder="••••••••"
+                    disabled={state === "loading"}
                     className={state === "error" ? "border-danger/60 focus-visible:ring-danger/30" : ""}
                   />
                 </motion.div>
@@ -165,27 +187,24 @@ export default function LoginPage() {
                       transition={{ duration: 0.2 }}
                       className="text-xs text-danger"
                     >
-                      Invalid email or password. Please try again.
+                      {errorMsg}
                     </motion.p>
                   )}
                 </AnimatePresence>
 
                 <motion.div variants={staggerChild}>
                   <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button type="submit" className="w-full" size="lg">
-                      Log in
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="lg"
+                      disabled={state === "loading"}
+                    >
+                      {state === "loading" ? "Logging in…" : "Log in"}
                     </Button>
                   </motion.div>
                 </motion.div>
               </motion.form>
-
-              <motion.div variants={staggerChild}>
-                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                  <Button variant="outline" className="mt-3 w-full" size="lg">
-                    Continue with Google
-                  </Button>
-                </motion.div>
-              </motion.div>
 
               <motion.p
                 variants={staggerChild}

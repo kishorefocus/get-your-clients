@@ -10,21 +10,50 @@ import { UserPlus, Users, Shield, Briefcase } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerChild, cardHoverProps } from "@/lib/motion";
+import { useOrgMembers } from "@/lib/hooks/use-org";
+import { TeamMember } from "@/types";
 
-const roleCounts = mockTeam.reduce(
-  (acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; },
-  {} as Record<string, number>
-);
-
-const orgStats = [
-  { label: "Total members", value: mockTeam.length, icon: Users },
-  { label: "Admins", value: roleCounts["Admin"] || 0, icon: Shield },
-  { label: "Managers", value: roleCounts["Manager"] || 0, icon: Briefcase },
-  { label: "Reps", value: roleCounts["Rep"] || 0, icon: Users },
-];
+/** Adapt a backend OrgMember to the frontend TeamMember shape. */
+function adaptMember(m: {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  is_active: boolean;
+}): TeamMember {
+  const roleMap: Record<string, TeamMember["role"]> = {
+    admin: "Admin",
+    manager: "Manager",
+    rep: "Rep",
+  };
+  return {
+    id: m.id,
+    name: m.full_name ?? m.email,
+    role: roleMap[m.role] ?? "Rep",
+    email: m.email,
+    online: m.is_active,
+  };
+}
 
 export default function TeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
+  const { data: apiMembers, isLoading } = useOrgMembers();
+
+  // Use real API members when available, fall back to mock data
+  const team: TeamMember[] =
+    apiMembers && apiMembers.length > 0 ? apiMembers.map(adaptMember) : mockTeam;
+
+  const roleCounts = team.reduce(
+    (acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; },
+    {} as Record<string, number>
+  );
+
+  const orgStats = [
+    { label: "Total members", value: team.length, icon: Users },
+    { label: "Admins", value: roleCounts["Admin"] || 0, icon: Shield },
+    { label: "Managers", value: roleCounts["Manager"] || 0, icon: Briefcase },
+    { label: "Reps", value: roleCounts["Rep"] || 0, icon: Users },
+  ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -62,16 +91,22 @@ export default function TeamPage() {
         </motion.div>
 
         {/* Member grid */}
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
-        >
-          {mockTeam.map((member, i) => (
-            <MemberCard key={member.id} member={member} index={i} />
-          ))}
-        </motion.div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          >
+            {team.map((member, i) => (
+              <MemberCard key={member.id} member={member} index={i} />
+            ))}
+          </motion.div>
+        )}
       </div>
 
       <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />

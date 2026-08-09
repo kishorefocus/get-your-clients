@@ -6,8 +6,8 @@ import { MessageThread } from "@/components/features/chat/message-thread";
 import { MessageInput } from "@/components/features/chat/message-input";
 import { ChatEmptyState } from "@/components/features/chat/chat-empty-state";
 import { useChatStore } from "@/lib/stores/chat-store";
+import { useChatThread } from "@/lib/hooks/use-chat";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Phone, Video, Info, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +51,17 @@ function ConversationHeader() {
   );
 }
 
+/**
+ * Activates the real-time WebSocket for the currently active conversation.
+ * This is a separate component so the WS lifecycle is scoped to when a
+ * conversation is actually selected.
+ */
+function ActiveChatConnector({ conversationId }: { conversationId: string }) {
+  // useChatThread connects to WS and streams messages into the store.
+  useChatThread(conversationId);
+  return null;
+}
+
 export default function InboxPage() {
   const { activeConversationId } = useChatStore();
 
@@ -62,6 +73,8 @@ export default function InboxPage() {
         <div className="flex min-h-0 flex-1 flex-col bg-surface">
           {activeConversationId ? (
             <>
+              {/* Mount WS connector as a side-effect component */}
+              <ActiveChatConnector conversationId={activeConversationId} />
               <ConversationHeader />
               <MessageThread />
               <MessageInput />

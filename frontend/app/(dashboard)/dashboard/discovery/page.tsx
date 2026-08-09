@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { List, Map as MapIcon, Columns2 } from "lucide-react";
 import { Topbar } from "@/components/features/layout/topbar";
 import { FilterSidebar, Filters } from "@/components/features/search/filter-sidebar";
@@ -28,6 +28,31 @@ export default function DiscoveryPage() {
   const [view, setView] = useState<ViewMode>("split");
   const [activeId, setActiveId] = useState<string | null>(null);
   const leads = useLeadsStore((s) => s.leads);
+  const isLoadingFromApi = useLeadsStore((s) => s.isLoadingFromApi);
+  const fetchFromApi = useLeadsStore((s) => s.fetchFromApi);
+
+  // Fetch real clients from backend on mount
+  useEffect(() => {
+    fetchFromApi({
+      keyword: filters.keyword || undefined,
+      country: filters.country || undefined,
+      limit: 50,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-fetch when keyword/country filter changes (debounced via useMemo dependency)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetchFromApi({
+        keyword: filters.keyword || undefined,
+        country: filters.country || undefined,
+        min_rating: filters.minRating || undefined,
+        limit: 50,
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [filters.keyword, filters.country, filters.minRating, fetchFromApi]);
 
   const results = useMemo(() => {
     return leads.filter((l) => {
@@ -52,18 +77,22 @@ export default function DiscoveryPage() {
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
             <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={results.length}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  transition={{ duration: 0.15 }}
-                  className="font-mono text-foreground font-semibold"
-                >
-                  {results.length}
-                </motion.span>
-              </AnimatePresence>
+              {isLoadingFromApi ? (
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={results.length}
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.15 }}
+                    className="font-mono text-foreground font-semibold"
+                  >
+                    {results.length}
+                  </motion.span>
+                </AnimatePresence>
+              )}
               <span>
                 results {filters.country ? ` in ${filters.country}` : " worldwide"}
               </span>
