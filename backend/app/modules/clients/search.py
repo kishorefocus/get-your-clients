@@ -2,8 +2,20 @@
 Search strategy (per build order: "Postgres/PostGIS first, add Elasticsearch
 once basic search works"):
 
-1. Postgres/PostGIS is always the source of truth for geo + structured
-   filters (industry, country, city, rating range) and is what runs first.
+1. Postgres is always the source of truth for geo + structured filters
+   (industry, country, city, rating range) and is what runs first.
+
+   Geo filtering here uses a plain Haversine-formula SQL expression over
+   `latitude`/`longitude` float columns — no PostGIS extension required.
+   A rough bounding box (computed in Python from the requested radius) is
+   applied first as a cheap pre-filter that can use the btree indexes on
+   those columns, then the exact Haversine distance is computed for
+   ordering and the final radius cutoff. This is a full-scan-of-the-bbox
+   approach: fine up to roughly hundreds of thousands of rows per
+   city/region, not a long-term substitute for PostGIS's GiST index at
+   very large scale — see the note in app/models/client.py if you later
+   install PostGIS and want to switch to ST_DWithin/ST_Distance.
+
 2. If a `keyword` is present AND Elasticsearch is reachable, we ask ES for a
    ranked list of matching client IDs and use that to *order* the Postgres
    results (ES for relevance, Postgres for correctness/authority). If ES is
@@ -16,6 +28,7 @@ once basic search works"):
 
 import base64
 import json
+import math
 import uuid
 from dataclasses import dataclass
 
@@ -25,6 +38,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.client import Client
 from app.modules.clients.repository import _visible_to_org
 from app.schemas.client import ClientSearchRequest
+
+EARTH_RADIUS_KM = 6371.0
+KM_PER_DEGREE_LAT = 111.32
+
+
+def _haversine_distance_km_expr(*, lat: float, lng: float):
+    """SQLAlchemy expression computing great-circle distance (km) from (lat, lng) to Client.latitude/longitude."""
+    lat1 = func.radians(lat)
+    lat2 = func.radians(Client.latitude)
+    dlat = func.radians(Client.latitude - lat)
+    dlng = func.radians(Client.longitude - lng)
+
+    a = func.sin(dlat / 2) * func.sin(dlat / 2) + func.cos(lat1) * func.cos(lat2) * func.sin(dlng / 2) * func.sin(dlng / 2)
+    c = 2 * func.atan2(func.sqrt(a), func.sqrt(1 - a))
+    return EARTH_RADIUS_KM * c
+
+
+def _bounding_box(*, lat: float, lng: float, radius_km: float) -> tuple[float, float, float, float]:
+    """Cheap pre-filter box (min_lat, max_lat, min_lng, max_lng) that fully contains the radius circle."""
+    lat_delta = radius_km / KM_PER_DEGREE_LAT
+    # Longitude degrees shrink in real distance as you move away from the equator;
+    # guard against div-by-zero near the poles.
+    km_per_degree_lng = KM_PER_DEGREE_LAT * max(math.cos(math.radians(lat)), 0.01)
+    lng_delta = radius_km / km_per_degree_lng
+    return lat - lat_delta, lat + lat_delta, lng - lng_delta, lng + lng_delta
 
 
 @dataclass
@@ -52,21 +90,24 @@ async def search_clients(
     """Returns (clients, distance_meters_per_client, next_cursor)."""
 
     filters = [_visible_to_org(org_id)]
-    distance_expr = None
+    distance_km_expr = None
+    distance_m_expr = None
 
     if query.lat is not None and query.lng is not None and query.radius_km is not None:
-        origin = func.ST_SetSRID(func.ST_MakePoint(query.lng, query.lat), 4326)
-        distance_expr = func.ST_Distance(Client.location, origin)
-        filters.append(Client.location.is_not(None))
-        filters.append(func.ST_DWithin(Client.location, origin, query.radius_km * 1000))
+        filters.append(Client.latitude.is_not(None))
+        filters.append(Client.longitude.is_not(None))
+
+        min_lat, max_lat, min_lng, max_lng = _bounding_box(lat=query.lat, lng=query.lng, radius_km=query.radius_km)
+        filters.append(Client.latitude.between(min_lat, max_lat))
+        filters.append(Client.longitude.between(min_lng, max_lng))
+
+        distance_km_expr = _haversine_distance_km_expr(lat=query.lat, lng=query.lng)
+        filters.append(distance_km_expr <= query.radius_km)
     elif None not in (query.min_lat, query.max_lat, query.min_lng, query.max_lng):
-        filters.append(Client.location.is_not(None))
-        envelope = func.ST_MakeEnvelope(
-            query.min_lng, query.min_lat, query.max_lng, query.max_lat, 4326
-        )
-        # Client.location is `geography`; cast both sides to `geometry` for the
-        # bbox containment check (ST_Within isn't defined on geography directly).
-        filters.append(func.ST_Within(Client.location.cast_geometry(), envelope))
+        filters.append(Client.latitude.is_not(None))
+        filters.append(Client.longitude.is_not(None))
+        filters.append(Client.latitude.between(query.min_lat, query.max_lat))
+        filters.append(Client.longitude.between(query.min_lng, query.max_lng))
 
     if query.industry_id is not None:
         filters.append(Client.industry_id == query.industry_id)
@@ -91,29 +132,29 @@ async def search_clients(
             )
 
     select_cols = [Client]
-    if distance_expr is not None:
-        select_cols.append(distance_expr.label("distance_m"))
+    if distance_km_expr is not None:
+        distance_m_expr = (distance_km_expr * 1000).label("distance_m")
+        select_cols.append(distance_m_expr)
 
     stmt = select(*select_cols).where(and_(*filters))
 
     if query.cursor:
         cursor = SearchCursor.decode(query.cursor)
-        if distance_expr is not None and cursor.last_distance_m is not None:
+        if distance_m_expr is not None and cursor.last_distance_m is not None:
             stmt = stmt.where(
                 or_(
-                    distance_expr > cursor.last_distance_m,
-                    and_(distance_expr == cursor.last_distance_m, Client.id > uuid.UUID(cursor.last_id)),
+                    distance_m_expr > cursor.last_distance_m,
+                    and_(distance_m_expr == cursor.last_distance_m, Client.id > uuid.UUID(cursor.last_id)),
                 )
             )
         else:
             stmt = stmt.where(Client.id > uuid.UUID(cursor.last_id))
 
-    if distance_expr is not None:
-        stmt = stmt.order_by(distance_expr.asc(), Client.id.asc())
+    if distance_m_expr is not None:
+        stmt = stmt.order_by(distance_m_expr.asc(), Client.id.asc())
     elif keyword_ids:
-        # Preserve ES relevance order
-        order_map = {cid: i for i, cid in enumerate(keyword_ids)}
-        stmt = stmt.order_by(Client.id.asc())  # DB-level tiebreak; final re-sort by relevance below
+        # Preserve ES relevance order (final re-sort by relevance happens below, this is just a DB-level tiebreak)
+        stmt = stmt.order_by(Client.id.asc())
     else:
         stmt = stmt.order_by(Client.created_at.desc(), Client.id.asc())
 
@@ -124,7 +165,7 @@ async def search_clients(
     has_more = len(rows) > query.limit
     rows = rows[: query.limit]
 
-    if distance_expr is not None:
+    if distance_m_expr is not None:
         clients = [row[0] for row in rows]
         distances = [row[1] for row in rows]
     else:

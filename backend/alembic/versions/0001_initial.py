@@ -18,9 +18,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS postgis")
-    op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")  # for future trigram-based fuzzy search at scale
-
     op.create_table(
         "organizations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -71,7 +68,6 @@ def upgrade() -> None:
         sa.Column("country", sa.String(2), nullable=True),
         sa.Column("latitude", sa.Float(), nullable=True),
         sa.Column("longitude", sa.Float(), nullable=True),
-        sa.Column("location", postgresql.BYTEA(), nullable=True),  # placeholder, replaced by geography below
         sa.Column("phone", sa.String(50), nullable=True),
         sa.Column("email", sa.String(320), nullable=True),
         sa.Column("website", sa.String(1000), nullable=True),
@@ -85,12 +81,11 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
-    # Drop the BYTEA placeholder and add a true PostGIS geography column (GeoAlchemy2's DDL
-    # hook does this automatically in normal dev use; spelled out explicitly here so the
-    # migration is correct when run standalone with plain SQLAlchemy Core).
-    op.drop_column("clients", "location")
-    op.execute("ALTER TABLE clients ADD COLUMN location geography(POINT, 4326)")
-    op.execute("CREATE INDEX ix_clients_location ON clients USING GIST (location)")
+    # Plain btree indexes on latitude/longitude — used as a bounding-box
+    # pre-filter by the Haversine-based search in app/modules/clients/search.py.
+    # No PostGIS/GiST required. See app/models/client.py for the tradeoff note.
+    op.create_index("ix_clients_latitude", "clients", ["latitude"])
+    op.create_index("ix_clients_longitude", "clients", ["longitude"])
     op.create_index("ix_clients_org_id", "clients", ["org_id"])
     op.create_index("ix_clients_org_industry", "clients", ["org_id", "industry_id"])
     op.create_index("ix_clients_city", "clients", ["city"])

@@ -25,8 +25,6 @@ async def create_client(
     fields = payload.model_dump(exclude={"metadata"})
     fields["metadata_json"] = payload.metadata
     client = await repository.create(db, org_id=org_id, **fields)
-    if client.latitude is not None and client.longitude is not None:
-        await _set_location(db, client)
     await audit.record(db, org_id=org_id, user_id=user_id, action="create", resource_type="client", resource_id=client.id)
     await db.commit()
     return client
@@ -83,15 +81,3 @@ async def search(db: AsyncSession, *, org_id: uuid.UUID, user_id: uuid.UUID, que
     )
     await db.commit()
     return clients, distances, next_cursor
-
-
-async def _set_location(db: AsyncSession, client: Client) -> None:
-    """Populates the PostGIS geography column from lat/lng via a raw UPDATE (GeoAlchemy2 needs WKT/EWKT)."""
-    from sqlalchemy import text
-
-    await db.execute(
-        text(
-            "UPDATE clients SET location = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography WHERE id = :id"
-        ),
-        {"lng": client.longitude, "lat": client.latitude, "id": str(client.id)},
-    )

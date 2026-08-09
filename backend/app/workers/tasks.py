@@ -92,14 +92,6 @@ async def _import_csv_rows(*, org_id: str, rows: list[dict], source_filename: st
                 db.add(client)
                 await db.flush()
 
-                if lat is not None and lng is not None:
-                    from sqlalchemy import text
-
-                    await db.execute(
-                        text("UPDATE clients SET location = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography WHERE id = :id"),
-                        {"lng": lng, "lat": lat, "id": str(client.id)},
-                    )
-
                 created += 1
             except Exception as exc:  # noqa: BLE001 — one bad row shouldn't abort the batch
                 logger.error("Failed to import row %r: %s", row, exc)

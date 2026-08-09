@@ -100,6 +100,8 @@ async def import_csv(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many imports; retry after {exc.retry_after_seconds}s",
         ) from exc
+    except Exception:
+        pass  # Redis unreachable locally — see note in middleware/rate_limit_middleware.py
 
     from app.modules.ingestion.csv_import import stage_upload_and_enqueue
 

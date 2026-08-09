@@ -1,7 +1,6 @@
 import uuid
 from enum import StrEnum
 
-from geoalchemy2 import Geography
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -25,13 +24,19 @@ class Client(UUIDPKMixin, TimestampMixin, Base):
     discover via search but not edit; orgs "claim" a client into their own
     pipeline by creating pipeline/interaction rows referencing it, not by
     mutating the shared record.
+
+    Geospatial search runs off plain latitude/longitude floats using a
+    Haversine-formula SQL expression (see app/modules/clients/search.py) so
+    this works on any vanilla Postgres install with no extensions required.
+    If you later install PostGIS, swap these two columns for a `geography`
+    column and use ST_DWithin/ST_Distance instead for better performance
+    and index support (GiST) at high row counts — the Haversine approach
+    here is a full-table-scan-with-bbox-prefilter, which is fine up to
+    roughly hundreds of thousands of rows per city but not beyond that.
     """
 
     __tablename__ = "clients"
-    __table_args__ = (
-        Index("ix_clients_location", "location", postgresql_using="gist"),
-        Index("ix_clients_org_industry", "org_id", "industry_id"),
-    )
+    __table_args__ = (Index("ix_clients_org_industry", "org_id", "industry_id"),)
 
     org_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
@@ -45,10 +50,8 @@ class Client(UUIDPKMixin, TimestampMixin, Base):
     city: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     country: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)  # ISO alpha-2
 
-    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
-    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
-    # PostGIS geography point, SRID 4326 (WGS84) — used for ST_DWithin radius search
-    location: Mapped[str | None] = mapped_column(Geography(geometry_type="POINT", srid=4326), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
 
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
@@ -68,3 +71,4 @@ class Client(UUIDPKMixin, TimestampMixin, Base):
 
     industry: Mapped["Industry | None"] = relationship()  # noqa: F821
     contacts: Mapped[list["Contact"]] = relationship(back_populates="client", cascade="all, delete-orphan")  # noqa: F821
+

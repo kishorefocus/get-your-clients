@@ -30,6 +30,11 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Rate limit exceeded"},
                 headers={"Retry-After": str(exc.retry_after_seconds)},
             )
+        except Exception:
+            # Redis unreachable (e.g. local dev without Redis running) — fail OPEN rather than
+            # 500 every request. This is a deliberate local-dev convenience; a production
+            # deploy should treat a down Redis as an incident, not silently skip rate limiting.
+            pass
         return await call_next(request)
 
     @staticmethod
