@@ -1,5 +1,6 @@
 import uuid
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import TimestampMixin, UUIDPKMixin
+
+if TYPE_CHECKING:
+    from app.models.contact import Contact
+    from app.models.industry import Industry
+    from app.models.tag import Tag
 
 
 class ConsentStatus(StrEnum):
@@ -71,4 +77,8 @@ class Client(UUIDPKMixin, TimestampMixin, Base):
 
     industry: Mapped["Industry | None"] = relationship()  # noqa: F821
     contacts: Mapped[list["Contact"]] = relationship(back_populates="client", cascade="all, delete-orphan")  # noqa: F821
+    tags: Mapped[list["Tag"]] = relationship(  # noqa: F821
+        secondary="client_tags",
+        lazy="selectin",
+    )
 

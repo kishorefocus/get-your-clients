@@ -7,7 +7,8 @@ import { ProfileTab } from "@/components/features/settings/profile-tab";
 import { BillingTab } from "@/components/features/settings/billing-tab";
 import { IntegrationsTab } from "@/components/features/settings/integrations-tab";
 import { NotificationsTab } from "@/components/features/settings/notifications-tab";
-import { User, CreditCard, Puzzle, Bell } from "lucide-react";
+import { AuditLogsTab } from "@/components/features/settings/audit-logs-tab";
+import { User, CreditCard, Puzzle, Bell, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeIn, tapProps, springUI } from "@/lib/motion";
 
@@ -16,6 +17,7 @@ const tabs = [
   { value: "billing", label: "Billing", icon: CreditCard, Component: BillingTab },
   { value: "integrations", label: "Integrations", icon: Puzzle, Component: IntegrationsTab },
   { value: "notifications", label: "Notifications", icon: Bell, Component: NotificationsTab },
+  { value: "audit", label: "Audit Logs", icon: Shield, Component: AuditLogsTab },
 ];
 
 export default function SettingsPage() {

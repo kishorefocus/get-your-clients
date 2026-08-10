@@ -37,6 +37,13 @@ class ClientUpdateRequest(BaseModel):
     consent_status: str | None = None
 
 
+class ClientTagResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class ClientResponse(BaseModel):
     id: uuid.UUID
     org_id: uuid.UUID | None
@@ -55,6 +62,7 @@ class ClientResponse(BaseModel):
     last_verified_at: datetime | None
     consent_status: str
     distance_meters: float | None = None  # populated only by geo search
+    tags: list[ClientTagResponse] = []
 
     model_config = {"from_attributes": True}
 

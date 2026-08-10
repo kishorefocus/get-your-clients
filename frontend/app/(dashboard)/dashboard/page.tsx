@@ -3,13 +3,37 @@
 import { Topbar } from "@/components/features/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Send, MessageSquare, DollarSign, ArrowUpRight, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Users,
+  Send,
+  MessageSquare,
+  DollarSign,
+  ArrowUpRight,
+  Zap,
+  Bell,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Calendar,
+  X,
+} from "lucide-react";
 import { mockLeads } from "@/lib/mock/leads";
-import { formatCoords } from "@/lib/utils";
+import { cn, formatCoords } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerChild, fadeUp, cardHoverProps, EASE_OUT } from "@/lib/motion";
+import { staggerContainer, staggerChild, fadeUp, cardHoverProps, EASE_OUT, springUI } from "@/lib/motion";
 import { useCountUp } from "@/lib/hooks/use-count-up";
 import { useEffect, useRef, useState } from "react";
+import {
+  useReminders,
+  useCreateReminder,
+  useUpdateReminder,
+  useDeleteReminder,
+} from "@/lib/hooks/use-reminders";
+import { useLeadsStore } from "@/lib/stores/leads-store";
+import { toast } from "sonner";
 
 /* ─── KPI data ───────────────────────────────────────────────────────────── */
 
@@ -97,6 +121,24 @@ export default function DashboardOverviewPage() {
   const [newId, setNewId] = useState<string | null>(null);
   const eventIndex = useRef(0);
 
+  // Store leads to link in reminder modal
+  const leads = useLeadsStore((s) => s.leads);
+
+  // Reminders API
+  const { data: reminders = [], isLoading: isLoadingReminders } = useReminders(true); // dueSoon = true
+  const createReminderMutation = useCreateReminder();
+  const updateReminderMutation = useUpdateReminder();
+  const deleteReminderMutation = useDeleteReminder();
+
+  // Create reminder state
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderForm, setReminderForm] = useState({
+    title: "",
+    notes: "",
+    due_at: "",
+    client_id: "",
+  });
+
   // Simulate a new activity item arriving every 12 seconds
   useEffect(() => {
     const id = setInterval(() => {
@@ -108,6 +150,40 @@ export default function DashboardOverviewPage() {
     }, 12_000);
     return () => clearInterval(id);
   }, []);
+
+  const handleToggleReminder = async (id: string, isDone: boolean) => {
+    try {
+      await updateReminderMutation.mutateAsync({
+        id,
+        payload: { is_done: !isDone },
+      });
+      toast.success(isDone ? "Reminder marked incomplete" : "Reminder marked completed");
+    } catch (err) {}
+  };
+
+  const handleDeleteReminder = async (id: string) => {
+    try {
+      await deleteReminderMutation.mutateAsync(id);
+    } catch (err) {}
+  };
+
+  const handleAddReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reminderForm.title.trim() || !reminderForm.due_at) {
+      toast.error("Title and Due Time are required");
+      return;
+    }
+    try {
+      await createReminderMutation.mutateAsync({
+        title: reminderForm.title.trim(),
+        notes: reminderForm.notes.trim() || undefined,
+        due_at: new Date(reminderForm.due_at).toISOString(),
+        client_id: reminderForm.client_id || undefined,
+      });
+      setIsReminderModalOpen(false);
+      setReminderForm({ title: "", notes: "", due_at: "", client_id: "" });
+    } catch (err) {}
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -227,7 +303,162 @@ export default function DashboardOverviewPage() {
             </Card>
           </motion.div>
         </motion.div>
+
+        {/* Reminders & Follow-up Tasks */}
+        <motion.div
+          className="mt-6"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          transition={{ delayChildren: 0.3 }}
+        >
+          <motion.div variants={staggerChild}>
+            <Card>
+              <CardHeader className="flex-row items-center justify-between space-y-0">
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-4.5 w-4.5 text-primary" /> Reminders & Due Follow-ups (Next 48h)
+                </CardTitle>
+                <Button size="sm" className="h-8 gap-1.5" onClick={() => setIsReminderModalOpen(true)}>
+                  <Plus className="h-3.5 w-3.5" /> New Task
+                </Button>
+              </CardHeader>
+              <CardContent className="pb-6">
+                <div className="space-y-2">
+                  {isLoadingReminders ? (
+                    <div className="flex justify-center py-6">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : reminders.length > 0 ? (
+                    reminders.map((r) => {
+                      const linkedLead = leads.find((l) => l.id === r.client_id);
+                      return (
+                        <div
+                          key={r.id}
+                          className={cn(
+                            "flex items-start justify-between p-3 rounded-md border border-border transition-colors hover:bg-muted/30 group",
+                            r.is_done ? "bg-muted/10 opacity-60" : "bg-card"
+                          )}
+                        >
+                          <div className="flex items-start gap-3 min-w-0">
+                            <button
+                              onClick={() => handleToggleReminder(r.id, r.is_done)}
+                              className="mt-0.5 text-muted-foreground hover:text-primary transition-colors shrink-0"
+                            >
+                              {r.is_done ? (
+                                <CheckCircle2 className="h-4.5 w-4.5 text-success fill-success/10" />
+                              ) : (
+                                <Circle className="h-4.5 w-4.5" />
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <p className={cn("text-sm font-medium", r.is_done && "line-through text-muted-foreground")}>
+                                {r.title}
+                              </p>
+                              {r.notes && <p className="text-xs text-muted-foreground/90 mt-0.5">{r.notes}</p>}
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-2.5 w-2.5" />
+                                  {new Date(r.due_at).toLocaleString()}
+                                </span>
+                                {linkedLead && (
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 capitalize">
+                                    Lead: {linkedLead.name}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-danger transition-opacity"
+                            onClick={() => handleDeleteReminder(r.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic text-center py-6">
+                      No reminders due in the next 48 hours. Clear schedule!
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
       </div>
+
+      {/* Create Reminder Modal */}
+      {isReminderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl">
+            <CardHeader className="flex-row items-center justify-between pb-3">
+              <CardTitle>Schedule Follow-up Task</CardTitle>
+              <button onClick={() => setIsReminderModalOpen(false)}>
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </CardHeader>
+            <form onSubmit={handleAddReminder}>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Task Title *</label>
+                  <Input
+                    placeholder="e.g. Call to finalize contract pricing"
+                    value={reminderForm.title}
+                    onChange={(e) => setReminderForm({ ...reminderForm, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Notes / Context</label>
+                  <textarea
+                    placeholder="Provide background info..."
+                    value={reminderForm.notes}
+                    onChange={(e) => setReminderForm({ ...reminderForm, notes: e.target.value })}
+                    rows={2}
+                    className="w-full rounded-md border border-border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Due Date & Time *</label>
+                  <Input
+                    type="datetime-local"
+                    value={reminderForm.due_at}
+                    onChange={(e) => setReminderForm({ ...reminderForm, due_at: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Link Client (Optional)</label>
+                  <select
+                    value={reminderForm.client_id}
+                    onChange={(e) => setReminderForm({ ...reminderForm, client_id: e.target.value })}
+                    className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">No Client Linked</option>
+                    {leads.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </CardContent>
+              <div className="flex justify-end gap-2 px-5 pb-5 pt-2">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setIsReminderModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={createReminderMutation.isPending}>
+                  Add Task
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

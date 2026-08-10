@@ -20,16 +20,41 @@ import {
   UserPlus,
   StickyNote,
   History,
+  Trash2,
+  Edit2,
+  Tag as TagIcon,
+  Plus,
+  X,
+  Shield,
+  ThumbsUp,
+  ThumbsDown,
+  HelpCircle,
 } from "lucide-react";
 import { Topbar } from "@/components/features/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { useLeadsStore } from "@/lib/stores/leads-store";
-import { getContacts, getFiles } from "@/lib/mock/profile";
+import { getFiles } from "@/lib/mock/profile";
 import { cn, formatCoords, initials } from "@/lib/utils";
 import { PipelineStage } from "@/types";
+import { useAuth } from "@/lib/hooks/use-auth";
+import {
+  useContacts,
+  useCreateContact,
+  useUpdateContact,
+  useDeleteContact,
+} from "@/lib/hooks/use-contacts";
+import {
+  useTags,
+  useCreateTag,
+  useAttachTag,
+  useDetachTag,
+} from "@/lib/hooks/use-tags";
+import { useInteractions, useCreateInteraction } from "@/lib/hooks/use-interactions";
+import { toast } from "sonner";
 
 const stages: PipelineStage[] = ["new", "contacted", "responded", "negotiating", "won", "lost"];
 const stageColor: Record<PipelineStage, "default" | "secondary" | "success" | "danger" | "accent"> = {
@@ -46,20 +71,135 @@ const fileIcon = { pdf: FileText, doc: FileText, image: ImageIcon, sheet: Sheet 
 export default function ClientProfilePage() {
   const params = useParams<{ leadId: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const [tab, setTab] = useState<"activity" | "notes">("activity");
   const [draftNote, setDraftNote] = useState("");
 
+  // Lead base store (contains stage and local mock state fallback)
   const lead = useLeadsStore((s) => s.getLead(params.leadId));
   const setStage = useLeadsStore((s) => s.setStage);
   const toggleSaved = useLeadsStore((s) => s.toggleSaved);
-  const addNote = useLeadsStore((s) => s.addNote);
-  const activity = useLeadsStore((s) => s.activity[params.leadId] ?? []);
-  const notes = useLeadsStore((s) => s.notes[params.leadId] ?? []);
+
+  // Dynamic Contacts API
+  const { data: contacts = [], isLoading: isLoadingContacts } = useContacts(params.leadId);
+  const createContactMutation = useCreateContact(params.leadId);
+  const updateContactMutation = useUpdateContact(params.leadId);
+  const deleteContactMutation = useDeleteContact(params.leadId);
+
+  // Contact modal state
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    title: "",
+    email: "",
+    phone: "",
+    consent_status: "unknown",
+  });
+
+  // Dynamic Tags API
+  const { data: globalTags = [] } = useTags();
+  const createTagMutation = useCreateTag();
+  const attachTagMutation = useAttachTag(params.leadId);
+  const detachTagMutation = useDetachTag(params.leadId);
+  const [newTagName, setNewTagName] = useState("");
+  const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+
+  // Dynamic Interactions API
+  const { data: interactionsData, isLoading: isLoadingInteractions } = useInteractions(params.leadId);
+  const createInteractionMutation = useCreateInteraction(params.leadId);
 
   if (!lead) return notFound();
 
-  const contacts = getContacts(lead);
+  // Attached files (retained mock)
   const files = getFiles(lead);
+
+  // Handlers for Contacts
+  const handleOpenAddContact = () => {
+    setEditingContactId(null);
+    setContactForm({
+      name: "",
+      title: "",
+      email: "",
+      phone: "",
+      consent_status: "unknown",
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleOpenEditContact = (c: any) => {
+    setEditingContactId(c.id);
+    setContactForm({
+      name: c.name,
+      title: c.title || "",
+      email: c.email || "",
+      phone: c.phone || "",
+      consent_status: c.consent_status || "unknown",
+    });
+    setIsContactModalOpen(true);
+  };
+
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.name.trim()) {
+      toast.error("Contact name is required");
+      return;
+    }
+
+    try {
+      if (editingContactId) {
+        await updateContactMutation.mutateAsync({
+          contactId: editingContactId,
+          payload: contactForm,
+        });
+      } else {
+        await createContactMutation.mutateAsync(contactForm);
+      }
+      setIsContactModalOpen(false);
+    } catch (err) {}
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (confirm("Are you sure you want to delete this contact?")) {
+      try {
+        await deleteContactMutation.mutateAsync(contactId);
+      } catch (err) {}
+    }
+  };
+
+  // Handlers for Tags
+  const handleCreateTag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    try {
+      await createTagMutation.mutateAsync({ name: newTagName.trim() });
+      setNewTagName("");
+    } catch (err) {}
+  };
+
+  const handleToggleTag = async (tagId: string, isAttached: boolean) => {
+    try {
+      if (isAttached) {
+        await detachTagMutation.mutateAsync(tagId);
+      } else {
+        await attachTagMutation.mutateAsync(tagId);
+      }
+    } catch (err) {}
+  };
+
+  // Handlers for Interactions
+  const handleAddNote = async () => {
+    if (!draftNote.trim()) return;
+    try {
+      await createInteractionMutation.mutateAsync({
+        type: "note",
+        summary: draftNote.trim(),
+      });
+      setDraftNote("");
+    } catch (err) {}
+  };
+
+  const isManagerOrAdmin = user?.role === "manager" || user?.role === "admin";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -137,8 +277,61 @@ export default function ClientProfilePage() {
                 </CardContent>
               </Card>
 
+              {/* Organization and Tags Card */}
               <Card>
-                <CardHeader><CardTitle>Organization</CardTitle></CardHeader>
+                <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle>Organization & Tags</CardTitle>
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1"
+                      onClick={() => setIsTagPopoverOpen(!isTagPopoverOpen)}
+                    >
+                      <TagIcon className="h-3 w-3" /> Manage
+                    </Button>
+                    {isTagPopoverOpen && (
+                      <div className="absolute right-0 top-8 z-50 w-64 rounded-md border border-border bg-popover p-3 shadow-md text-popover-foreground">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold">Toggles Tags</span>
+                          <button onClick={() => setIsTagPopoverOpen(false)}>
+                            <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                        </div>
+                        <div className="max-h-36 overflow-y-auto space-y-1 scrollbar-thin">
+                          {globalTags.map((t) => {
+                            const isAttached = lead.tags?.includes(t.name) || false;
+                            return (
+                              <label key={t.id} className="flex items-center gap-2 text-xs cursor-pointer py-1 px-1.5 rounded hover:bg-muted/40">
+                                <input
+                                  type="checkbox"
+                                  checked={isAttached}
+                                  onChange={() => handleToggleTag(t.id, isAttached)}
+                                  className="rounded border-border accent-primary"
+                                />
+                                <span className="truncate">{t.name}</span>
+                              </label>
+                            );
+                          })}
+                          {globalTags.length === 0 && (
+                            <p className="text-[11px] text-muted-foreground">No tags defined yet.</p>
+                          )}
+                        </div>
+                        <form onSubmit={handleCreateTag} className="mt-3 flex gap-1.5 pt-2.5 border-t border-border">
+                          <Input
+                            placeholder="New tag..."
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            className="h-7 text-xs bg-background/50"
+                          />
+                          <Button type="submit" size="sm" className="h-7 w-7 p-0 shrink-0">
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
                 <CardContent className="space-y-2.5 text-sm">
                   <InfoRow icon={Globe} label={lead.website ?? "—"} />
                   <InfoRow icon={Mail} label={lead.email ?? "—"} />
@@ -148,31 +341,72 @@ export default function ClientProfilePage() {
                     <span className="font-medium text-foreground">{lead.companySize ?? "Unknown"}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-2">
-                    {lead.tags.map((t) => <Badge key={t} variant="secondary">{t}</Badge>)}
+                    {lead.tags?.map((t) => (
+                      <Badge key={t} variant="secondary" className="gap-1 pl-2">
+                        {t}
+                      </Badge>
+                    ))}
+                    {(!lead.tags || lead.tags.length === 0) && (
+                      <span className="text-xs text-muted-foreground italic">No tags attached</span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Contacts CRUD Card */}
               <Card>
                 <CardHeader className="flex-row items-center justify-between space-y-0">
-                  <CardTitle>Contacts</CardTitle>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"><UserPlus className="h-3.5 w-3.5" /> Add</Button>
+                  <CardTitle>Contacts ({contacts.length})</CardTitle>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={handleOpenAddContact}>
+                    <UserPlus className="h-3.5 w-3.5" /> Add
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {contacts.map((c) => (
-                    <div key={c.id} className="flex items-center gap-2.5">
-                      <Avatar className="h-8 w-8"><AvatarFallback>{initials(c.name)}</AvatarFallback></Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {c.name} {c.isPrimary && <span className="ml-1 text-[10px] font-medium text-primary">PRIMARY</span>}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">{c.title}</p>
+                  {isLoadingContacts ? (
+                    <div className="flex justify-center py-4">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    </div>
+                  ) : contacts.map((c) => (
+                    <div key={c.id} className="flex items-start gap-2.5 justify-between group/contact border-b border-border/20 pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Avatar className="h-8 w-8"><AvatarFallback>{initials(c.name)}</AvatarFallback></Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {c.name}
+                            {c.consent_status === "opted_in" && (
+                              <span title="Opted In">
+                                <ThumbsUp className="inline h-3 w-3 text-success ml-1.5" />
+                              </span>
+                            )}
+                            {c.consent_status === "opted_out" && (
+                              <span title="Opted Out">
+                                <ThumbsDown className="inline h-3 w-3 text-danger ml-1.5" />
+                              </span>
+                            )}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">{c.title || "No Title"}</p>
+                          {c.email && <p className="truncate text-[10px] text-muted-foreground/80">{c.email}</p>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0 opacity-0 group-hover/contact:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleOpenEditContact(c)}>
+                          <Edit2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        {isManagerOrAdmin && (
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteContact(c.id)}>
+                            <Trash2 className="h-3 w-3 text-danger" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
+                  {contacts.length === 0 && !isLoadingContacts && (
+                    <p className="text-xs text-muted-foreground italic text-center py-2">No contact person logged yet.</p>
+                  )}
                 </CardContent>
               </Card>
 
+              {/* Files */}
               <Card>
                 <CardHeader><CardTitle>Files</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
@@ -206,47 +440,60 @@ export default function ClientProfilePage() {
                   {tab === "notes" && (
                     <div className="mb-4 flex gap-2">
                       <textarea
-                        value={draftNote}
-                        onChange={(e) => setDraftNote(e.target.value)}
-                        placeholder="Add a note about this client…"
-                        rows={2}
-                        className="flex-1 resize-none rounded-md border border-border bg-background p-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      />
+                      value={draftNote}
+                      onChange={(e) => setDraftNote(e.target.value)}
+                      placeholder="Add a note or manually log activity about this client…"
+                      rows={2}
+                      className="flex-1 resize-none rounded-md border border-border bg-background p-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
                       <Button
                         size="sm"
-                        className="self-end"
-                        disabled={!draftNote.trim()}
-                        onClick={() => { addNote(lead.id, draftNote.trim()); setDraftNote(""); }}
+                        className="self-end gap-1.5"
+                        disabled={!draftNote.trim() || createInteractionMutation.isPending}
+                        onClick={handleAddNote}
                       >
                         <Send className="h-3.5 w-3.5" />
+                        Log
                       </Button>
                     </div>
                   )}
 
                   <div className="space-y-4">
-                    {tab === "activity"
-                      ? activity.map((e) => (
-                          <div key={e.id} className="flex gap-3">
-                            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-sm">{e.label}</p>
-                              <p className="text-xs text-muted-foreground">{new Date(e.timestamp).toLocaleString()}</p>
-                            </div>
-                          </div>
-                        ))
-                      : notes.length === 0
-                        ? <p className="text-sm text-muted-foreground">No notes yet — add the first one above.</p>
-                        : notes.map((n) => (
-                            <div key={n.id} className="flex gap-3">
-                              <Avatar className="h-6 w-6 shrink-0"><AvatarFallback className="text-[10px]">{initials(n.author)}</AvatarFallback></Avatar>
-                              <div>
-                                <p className="text-sm"><span className="font-medium">{n.author}</span> {n.body}</p>
-                                <p className="text-xs text-muted-foreground">{new Date(n.createdAt).toLocaleString()}</p>
+                    {isLoadingInteractions ? (
+                      <div className="flex justify-center py-8">
+                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      </div>
+                    ) : interactionsData?.results && interactionsData.results.length > 0 ? (
+                      interactionsData.results
+                        .filter(e => tab === "activity" || e.type === "note")
+                        .map((e) => {
+                          const isNote = e.type === "note";
+                          return (
+                            <div key={e.id} className="flex gap-3 items-start border-b border-border/10 pb-3 last:border-0 last:pb-0">
+                              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                {e.type === "call" && <Phone className="h-3.5 w-3.5" />}
+                                {e.type === "email" && <Mail className="h-3.5 w-3.5" />}
+                                {e.type === "sms" && <MessageSquare className="h-3.5 w-3.5" />}
+                                {e.type === "chat_message" && <Send className="h-3.5 w-3.5" />}
+                                {isNote && <StickyNote className="h-3.5 w-3.5 text-accent" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold capitalize text-foreground/90">
+                                  {e.type.replace("_", " ")}
+                                </p>
+                                <p className="text-sm text-foreground/80 mt-0.5 break-words whitespace-pre-wrap">
+                                  {e.summary || "No description logged"}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {new Date(e.created_at).toLocaleString()}
+                                </p>
                               </div>
                             </div>
-                          ))}
+                          );
+                        })
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic text-center py-4">No events logged yet.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -254,6 +501,78 @@ export default function ClientProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Contacts Add/Edit Modal */}
+      {isContactModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl">
+            <CardHeader className="flex-row items-center justify-between pb-3">
+              <CardTitle>{editingContactId ? "Edit Contact" : "Add New Contact"}</CardTitle>
+              <button onClick={() => setIsContactModalOpen(false)}>
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </CardHeader>
+            <form onSubmit={handleSaveContact}>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Full Name *</label>
+                  <Input
+                    placeholder="e.g. Haruto Sato"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Job Title</label>
+                  <Input
+                    placeholder="e.g. Procurement Director"
+                    value={contactForm.title}
+                    onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="e.g. haruto@client.com"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Phone Number</label>
+                  <Input
+                    placeholder="e.g. +81 90-1234-5678"
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Compliance / Consent</label>
+                  <select
+                    value={contactForm.consent_status}
+                    onChange={(e) => setContactForm({ ...contactForm, consent_status: e.target.value })}
+                    className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="unknown">Unknown</option>
+                    <option value="opted_in">Opted In (Authorized Outreach)</option>
+                    <option value="opted_out">Opted Out (Do Not Contact)</option>
+                  </select>
+                </div>
+              </CardContent>
+              <div className="flex justify-end gap-2 px-5 pb-5 pt-2">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setIsContactModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={createContactMutation.isPending || updateContactMutation.isPending}>
+                  Save Contact
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -282,9 +601,6 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
 }
 
 function MiniMapEmbed({ lat, lng }: { lat: number; lng: number }) {
-  // Placeholder for a Google Maps "place embed" iframe / <GoogleMap> pinned + zoomed
-  // to this lead's coordinates. Swap for:
-  // <iframe src={`https://www.google.com/maps/embed/v1/place?key=${key}&q=${lat},${lng}`} />
   const x = ((lng + 180) / 360) * 100;
   const y = ((90 - lat) / 180) * 100;
   return (

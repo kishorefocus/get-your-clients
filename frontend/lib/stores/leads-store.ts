@@ -51,7 +51,8 @@ function clientToLead(c: ClientResponse): Lead {
     distanceKm: c.distance_meters != null ? c.distance_meters / 1000 : undefined,
     stage: "new",
     priority: "medium",
-    tags: [],
+    tags: c.tags ? c.tags.map((t) => t.name) : [],
+    industryId: c.industry_id ?? undefined,
   };
 }
 

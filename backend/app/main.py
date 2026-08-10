@@ -12,6 +12,15 @@ from app.modules.clients.router import router as clients_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.pipeline.router import router as pipeline_router
 
+# Gap-fill routers (previously models-only, now fully wired)
+from app.modules.contacts.router import router as contacts_router
+from app.modules.industries.router import router as industries_router
+from app.modules.tags.router import router as tags_router
+from app.modules.saved_searches.router import router as saved_searches_router
+from app.modules.reminders.router import router as reminders_router
+from app.modules.interactions.router import router as interactions_router
+from app.modules.audit_logs.router import router as audit_logs_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,12 +61,18 @@ async def health():
     return {"status": "ok"}
 
 
+# Core routers
 app.include_router(auth_router)
 app.include_router(orgs_router)
 app.include_router(clients_router)
 app.include_router(pipeline_router)
 app.include_router(chat_router)
 
-# --- Not yet wired (see README "What's stubbed") ---
-# app.include_router(calls_router)       # Twilio calling module — build-order step 7
-# app.include_router(analytics_router)   # Analytics/reporting endpoints — build-order step 8
+# Gap-fill routers
+app.include_router(contacts_router)
+app.include_router(industries_router)
+app.include_router(tags_router)
+app.include_router(saved_searches_router)
+app.include_router(reminders_router)
+app.include_router(interactions_router)
+app.include_router(audit_logs_router)

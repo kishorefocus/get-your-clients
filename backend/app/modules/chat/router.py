@@ -10,6 +10,7 @@ from app.modules.chat import service
 from app.modules.chat.manager import manager
 from app.core.security import JWTError, TokenType, decode_token
 from app.models.message import Message
+from app.models.message import MessageThread
 from app.schemas.chat import MessageResponse, WebSocketEvent
 
 router = APIRouter(tags=["chat"])
@@ -60,6 +61,11 @@ async def chat_websocket(websocket: WebSocket, thread_id: uuid.UUID, token: str 
         await websocket.close(code=4401)
         return
 
+    # Resolve client_id from thread so we can write an Interaction row
+    async with AsyncSessionLocal() as db:
+        thread = await db.get(MessageThread, thread_id)
+    client_id = thread.client_id if thread else None
+
     await manager.connect(thread_id, websocket)
     try:
         while True:
@@ -70,7 +76,12 @@ async def chat_websocket(websocket: WebSocket, thread_id: uuid.UUID, token: str 
 
             async with AsyncSessionLocal() as db:
                 message = await service.save_message(
-                    db, thread_id=thread_id, sender_user_id=current_user.user_id, body=body
+                    db,
+                    thread_id=thread_id,
+                    sender_user_id=current_user.user_id,
+                    body=body,
+                    org_id=current_user.org_id,
+                    client_id=client_id,
                 )
 
             event = WebSocketEvent(

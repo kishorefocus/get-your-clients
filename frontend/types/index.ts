@@ -25,6 +25,7 @@ export interface Lead {
   nextFollowUp?: string;
   assignedRep?: string;
   tags: string[];
+  industryId?: string;
 }
 
 export interface TeamMember {

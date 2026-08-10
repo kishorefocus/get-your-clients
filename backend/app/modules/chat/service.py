@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.interaction import InteractionType
 from app.models.message import Message, MessageStatus, MessageThread
 
 
@@ -17,9 +18,36 @@ async def get_or_create_thread(db: AsyncSession, *, org_id: uuid.UUID, client_id
     return thread
 
 
-async def save_message(db: AsyncSession, *, thread_id: uuid.UUID, sender_user_id: uuid.UUID | None, body: str) -> Message:
+async def save_message(
+    db: AsyncSession,
+    *,
+    thread_id: uuid.UUID,
+    sender_user_id: uuid.UUID | None,
+    body: str,
+    org_id: uuid.UUID | None = None,
+    client_id: uuid.UUID | None = None,
+) -> Message:
+    """
+    Persist a chat message and — when org_id + client_id are provided —
+    also write a unified Interaction row so the activity timeline stays current.
+    """
     message = Message(thread_id=thread_id, sender_user_id=sender_user_id, body=body, status=MessageStatus.SENT.value)
     db.add(message)
+    await db.flush()
+
+    if org_id is not None and client_id is not None:
+        from app.modules.interactions import repository as interaction_repo  # local import avoids circular deps
+
+        await interaction_repo.create(
+            db,
+            org_id=org_id,
+            client_id=client_id,
+            user_id=sender_user_id,
+            type=InteractionType.CHAT_MESSAGE.value,
+            summary=body[:200] if body else None,
+            related_id=message.id,
+        )
+
     await db.commit()
     await db.refresh(message)
     return message

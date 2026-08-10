@@ -16,6 +16,7 @@ type ViewMode = "list" | "map" | "split";
 const defaultFilters: Filters = {
   keyword: "",
   industry: null,
+  industryId: null,
   country: null,
   hasPhone: false,
   hasEmail: false,
@@ -36,28 +37,30 @@ export default function DiscoveryPage() {
     fetchFromApi({
       keyword: filters.keyword || undefined,
       country: filters.country || undefined,
+      industry_id: filters.industryId || undefined,
       limit: 50,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch when keyword/country filter changes (debounced via useMemo dependency)
+  // Re-fetch when keyword/country/industry filter changes (debounced via useMemo dependency)
   useEffect(() => {
     const t = setTimeout(() => {
       fetchFromApi({
         keyword: filters.keyword || undefined,
         country: filters.country || undefined,
+        industry_id: filters.industryId || undefined,
         min_rating: filters.minRating || undefined,
         limit: 50,
       });
     }, 400);
     return () => clearTimeout(t);
-  }, [filters.keyword, filters.country, filters.minRating, fetchFromApi]);
+  }, [filters.keyword, filters.country, filters.industryId, filters.minRating, fetchFromApi]);
 
   const results = useMemo(() => {
     return leads.filter((l) => {
       if (filters.keyword && !`${l.name} ${l.category}`.toLowerCase().includes(filters.keyword.toLowerCase())) return false;
-      if (filters.industry && l.industry !== filters.industry) return false;
+      if (filters.industryId && l.industryId !== filters.industryId) return false;
       if (filters.country && l.country !== filters.country) return false;
       if (filters.hasPhone && !l.phone) return false;
       if (filters.hasEmail && !l.email) return false;

@@ -18,6 +18,7 @@ export interface ClientResponse {
   last_verified_at: string | null;
   consent_status: string;
   distance_meters: number | null;
+  tags?: { id: string; name: string }[];
 }
 
 export interface ClientSearchRequest {
