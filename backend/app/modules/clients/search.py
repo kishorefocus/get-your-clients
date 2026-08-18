@@ -222,7 +222,7 @@ async def search_clients(
 
     rows = (await db.execute(stmt)).all()
 
-    if not rows:
+    if len(rows) < query.limit:
         # If no clients are found in the DB, try to dynamically search Google Places (which falls back to Gemini)
         search_query = query.keyword or ""
         location_parts = []
@@ -279,18 +279,7 @@ async def search_clients(
                     await db.commit()
 
                     if new_client_ids:
-                        fallback_filters = [_visible_to_org(org_id), Client.id.in_(new_client_ids)]
-                        if resolved_lat is not None and resolved_lng is not None:
-                            fallback_filters.extend([Client.latitude.is_not(None), Client.longitude.is_not(None)])
-                        
-                        fallback_stmt = select(*select_cols).where(and_(*fallback_filters))
-                        if distance_m_expr is not None:
-                            fallback_stmt = fallback_stmt.order_by(distance_m_expr.asc(), Client.id.asc())
-                        else:
-                            fallback_stmt = fallback_stmt.order_by(Client.created_at.desc(), Client.id.asc())
-                        
-                        fallback_stmt = fallback_stmt.limit(query.limit + 1)
-                        rows = (await db.execute(fallback_stmt)).all()
+                        rows = (await db.execute(stmt)).all()
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).exception("Failed to dynamically search and ingest via Gemini: %s", e)

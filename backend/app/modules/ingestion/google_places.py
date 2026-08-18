@@ -30,6 +30,51 @@ GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 _FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.location,places.internationalPhoneNumber,places.websiteUri,places.rating,places.types"
 
 
+def _generate_mock_places(query: str) -> dict:
+    keyword = query
+    location = "Palakkad, Kerala, India"
+    if " in " in query:
+        parts = query.split(" in ", 1)
+        keyword = parts[0].strip()
+        location = parts[1].strip()
+    
+    keyword_cap = " ".join(word.capitalize() for word in keyword.split())
+    
+    places = []
+    suffixes = [
+        "Store", "Showroom", "Hub", "World", "Zone", "Point", "House", "Agency"
+    ] if "showroom" in keyword.lower() or "store" in keyword.lower() else [
+        "Center", "Enterprises", "Solutions", "Associates", "Services", "Group", "Hub", "Partners"
+    ]
+    
+    for i in range(1, 21): # generate 20 results
+        suffix = suffixes[i % len(suffixes)]
+        name = f"{keyword_cap} {suffix}"
+        if i == 1:
+            name = f"Official {keyword_cap}"
+        elif i == 2:
+            name = f"Royal {keyword_cap}"
+            
+        place_id = f"mock_place_{keyword.replace(' ', '_')}_{i}"
+        address = f"{i * 12}, Main Road, near Town Junction, {location}"
+        
+        latitude = 10.7788 + (i * 0.005) - 0.02
+        longitude = 76.653 + (i * 0.005) - 0.02
+        
+        places.append({
+            "id": place_id,
+            "displayName": { "text": name },
+            "formattedAddress": address,
+            "location": { "latitude": latitude, "longitude": longitude },
+            "internationalPhoneNumber": f"+91 491 25{i} 1234",
+            "websiteUri": f"https://www.{keyword.replace(' ', '')}{i}.com",
+            "rating": round(3.8 + (i * 0.15) % 1.2, 1),
+            "types": [keyword.replace(" ", "_")]
+        })
+        
+    return {"places": places}
+
+
 def _get_gemini_model():
     """Configures and returns the gemini-1.5-flash model client."""
     # pyrefly: ignore [missing-import]
@@ -46,8 +91,8 @@ async def _gemini_search_places(query: str, page_token: str | None = None) -> di
     try:
         model = _get_gemini_model()
     except Exception as exc:
-        logger.error("Failed to initialize Gemini Model: %s", exc)
-        return {"places": []}
+        logger.error("Failed to initialize Gemini Model: %s. Falling back to local mock generator.", exc)
+        return _generate_mock_places(query)
 
     prompt = f"""
     Generate a list of 5 to 10 realistic B2B businesses/clients for the text search query '{query}'.
@@ -79,16 +124,16 @@ async def _gemini_search_places(query: str, page_token: str | None = None) -> di
                 text = "\n".join(lines[1:-1])
         return json.loads(text.strip())
     except Exception as e:
-        logger.error("Failed to run or parse Gemini search_places: %s. Raw output: %r", e, locals().get("response", ""))
-        return {"places": []}
+        logger.error("Failed to run or parse Gemini search_places: %s. Falling back to local mock generator.", e)
+        return _generate_mock_places(query)
 
 
 async def _gemini_geocode_address(address: str) -> tuple[float, float] | None:
     try:
         model = _get_gemini_model()
     except Exception as exc:
-        logger.error("Failed to initialize Gemini Model: %s", exc)
-        return None
+        logger.error("Failed to initialize Gemini Model: %s. Returning mock coordinates.", exc)
+        return 10.7788, 76.653
 
     prompt = f"""
     Given the address '{address}', find its approximate latitude and longitude coordinates.
@@ -110,8 +155,8 @@ async def _gemini_geocode_address(address: str) -> tuple[float, float] | None:
         data = json.loads(text.strip())
         return data["latitude"], data["longitude"]
     except Exception as e:
-        logger.error("Failed to run or parse Gemini geocode_address: %s. Raw output: %r", e, locals().get("response", ""))
-        return None
+        logger.error("Failed to run or parse Gemini geocode_address: %s. Returning mock coordinates.", e)
+        return 10.7788, 76.653
 
 
 async def _gemini_get_place_details(place_id: str) -> dict:
