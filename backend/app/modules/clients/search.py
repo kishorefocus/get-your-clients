@@ -43,6 +43,24 @@ EARTH_RADIUS_KM = 6371.0
 KM_PER_DEGREE_LAT = 111.32
 
 
+def _map_country_to_iso2(country: str) -> str:
+    c = country.strip().lower()
+    mapping = {
+        "india": "IN",
+        "united states": "US",
+        "usa": "US",
+        "united kingdom": "GB",
+        "uk": "GB",
+        "canada": "CA",
+        "australia": "AU",
+        "germany": "DE",
+        "france": "FR",
+        "italy": "IT",
+        "spain": "ES",
+    }
+    return mapping.get(c, country)
+
+
 def _haversine_distance_km_expr(*, lat: float, lng: float):
     """SQLAlchemy expression computing great-circle distance (km) from (lat, lng) to Client.latitude/longitude."""
     lat1 = func.radians(lat)
@@ -137,9 +155,26 @@ async def search_clients(
     if query.industry_id is not None:
         filters.append(Client.industry_id == query.industry_id)
     if resolved_country is not None:
-        filters.append(Client.country == resolved_country)
+        country_iso = _map_country_to_iso2(resolved_country).upper()
+        filters.append(
+            or_(
+                Client.country == country_iso,
+                Client.country.ilike(resolved_country),
+                Client.address.ilike(f"%{resolved_country}%"),
+            )
+        )
     if resolved_city is not None:
-        filters.append(Client.city.ilike(resolved_city))
+        city_parts = [p.strip() for p in resolved_city.split(",") if p.strip()]
+        if city_parts:
+            city_filters = []
+            for part in city_parts:
+                city_filters.append(
+                    or_(
+                        Client.city.ilike(f"%{part}%"),
+                        Client.address.ilike(f"%{part}%"),
+                    )
+                )
+            filters.append(and_(*city_filters))
     if query.min_rating is not None:
         filters.append(Client.rating >= query.min_rating)
     if query.max_rating is not None:
