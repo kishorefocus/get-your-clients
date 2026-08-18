@@ -36,10 +36,16 @@ function clientToLead(c: ClientResponse): Lead {
   return {
     id: c.id,
     name: c.name,
-    category: c.source ?? "Business",
+    category: c.tags && c.tags.length > 0
+      ? c.tags[0].name
+      : c.source === "google_places"
+      ? "Discovered Lead"
+      : c.source === "csv_import"
+      ? "CSV Import"
+      : "Manual Lead",
     industry: "Unknown",
     country: c.country ?? "",
-    countryCode: (c.country ?? "").toUpperCase().slice(0, 2),
+    countryCode: (c.country ?? "").toUpperCase().slice(0, 2) || "GL",
     city: c.city ?? "",
     address: c.address ?? "",
     lat: c.latitude ?? 0,

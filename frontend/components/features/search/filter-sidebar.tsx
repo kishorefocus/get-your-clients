@@ -20,7 +20,9 @@ export interface Filters {
   keyword: string;
   industry: string | null;
   industryId: string | null;
-  country: string | null;
+  country: string;
+  city: string;
+  limit: number;
   hasPhone: boolean;
   hasEmail: boolean;
   minRating: number;
@@ -78,7 +80,9 @@ export function FilterSidebar({
       keyword: s.query.keyword || "",
       industry: null, // Since we only store industryId in serialized search
       industryId: s.query.industry_id || null,
-      country: s.query.country || null,
+      country: s.query.country || "",
+      city: s.query.city || "",
+      limit: s.query.limit || 10,
       hasPhone: false,
       hasEmail: false,
       minRating: s.query.min_rating || 0,
@@ -155,7 +159,9 @@ export function FilterSidebar({
               keyword: "",
               industry: null,
               industryId: null,
-              country: null,
+              country: "",
+              city: "",
+              limit: 10,
               hasPhone: false,
               hasEmail: false,
               minRating: 0,
@@ -247,16 +253,40 @@ export function FilterSidebar({
           </div>
         </div>
 
-        {/* Country Picker */}
+        {/* Place or City Input */}
         <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Country</p>
-          <div className="flex flex-wrap gap-1.5">
-            {countries.map((c) => (
-              <Chip key={c} active={filters.country === c} onClick={() => set("country", filters.country === c ? null : c)}>
-                {c}
-              </Chip>
-            ))}
-          </div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Place, City or District</label>
+          <Input
+            placeholder="e.g. kerala, palakkad district, Austin…"
+            value={filters.city}
+            onChange={(e) => set("city", e.target.value)}
+            className="focus-visible:ring-primary/20"
+          />
+        </div>
+
+        {/* Country Input */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Country</label>
+          <Input
+            placeholder="e.g. US, India, France…"
+            value={filters.country}
+            onChange={(e) => set("country", e.target.value)}
+            className="focus-visible:ring-primary/20"
+          />
+        </div>
+
+        {/* Result Count Input */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Result Count</label>
+          <Input
+            type="number"
+            min={1}
+            max={100}
+            placeholder="e.g. 10"
+            value={filters.limit}
+            onChange={(e) => set("limit", Number(e.target.value))}
+            className="focus-visible:ring-primary/20"
+          />
         </div>
 
         {/* Radius Search */}

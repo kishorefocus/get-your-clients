@@ -1,4 +1,5 @@
 from functools import lru_cache
+# pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
     elasticsearch_url: str = "http://localhost:9200"
 
     google_maps_api_key: str | None = None
+    gemini_api_key: str | None = None
 
     twilio_account_sid: str | None = None
     twilio_auth_token: str | None = None

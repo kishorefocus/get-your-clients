@@ -76,7 +76,7 @@ export function LeadCard({
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> {lead.city}, {lead.country}
+              <MapPin className="h-3 w-3" /> {lead.city && lead.country ? `${lead.city}, ${lead.country}` : lead.address || "Unknown Location"}
             </span>
             {lead.rating && (
               <span className="flex items-center gap-1">

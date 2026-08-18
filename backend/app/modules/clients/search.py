@@ -89,19 +89,44 @@ async def search_clients(
 ) -> tuple[list[Client], list[float | None], str | None]:
     """Returns (clients, distance_meters_per_client, next_cursor)."""
 
+    resolved_lat = query.lat
+    resolved_lng = query.lng
+    resolved_city = query.city
+    resolved_country = query.country
+
+    if query.place_id:
+        try:
+            from app.modules.ingestion.google_places import get_place_details, extract_place_details
+            from fastapi import HTTPException, status
+            
+            details = await get_place_details(query.place_id)
+            plat, plng, pcity, pcountry = extract_place_details(details)
+            if plat is not None and plng is not None:
+                resolved_lat = plat
+                resolved_lng = plng
+            if pcity:
+                resolved_city = pcity
+            if pcountry:
+                resolved_country = pcountry
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to resolve place_id '{query.place_id}': {exc}"
+            )
+
     filters = [_visible_to_org(org_id)]
     distance_km_expr = None
     distance_m_expr = None
 
-    if query.lat is not None and query.lng is not None and query.radius_km is not None:
+    if resolved_lat is not None and resolved_lng is not None and query.radius_km is not None:
         filters.append(Client.latitude.is_not(None))
         filters.append(Client.longitude.is_not(None))
 
-        min_lat, max_lat, min_lng, max_lng = _bounding_box(lat=query.lat, lng=query.lng, radius_km=query.radius_km)
+        min_lat, max_lat, min_lng, max_lng = _bounding_box(lat=resolved_lat, lng=resolved_lng, radius_km=query.radius_km)
         filters.append(Client.latitude.between(min_lat, max_lat))
         filters.append(Client.longitude.between(min_lng, max_lng))
 
-        distance_km_expr = _haversine_distance_km_expr(lat=query.lat, lng=query.lng)
+        distance_km_expr = _haversine_distance_km_expr(lat=resolved_lat, lng=resolved_lng)
         filters.append(distance_km_expr <= query.radius_km)
     elif None not in (query.min_lat, query.max_lat, query.min_lng, query.max_lng):
         filters.append(Client.latitude.is_not(None))
@@ -111,10 +136,10 @@ async def search_clients(
 
     if query.industry_id is not None:
         filters.append(Client.industry_id == query.industry_id)
-    if query.country is not None:
-        filters.append(Client.country == query.country)
-    if query.city is not None:
-        filters.append(Client.city.ilike(query.city))
+    if resolved_country is not None:
+        filters.append(Client.country == resolved_country)
+    if resolved_city is not None:
+        filters.append(Client.city.ilike(resolved_city))
     if query.min_rating is not None:
         filters.append(Client.rating >= query.min_rating)
     if query.max_rating is not None:
@@ -161,6 +186,79 @@ async def search_clients(
     stmt = stmt.limit(query.limit + 1)  # fetch one extra to know if there's a next page
 
     rows = (await db.execute(stmt)).all()
+
+    if not rows:
+        # If no clients are found in the DB, try to dynamically search Google Places (which falls back to Gemini)
+        search_query = query.keyword or ""
+        location_parts = []
+        if resolved_city:
+            location_parts.append(resolved_city)
+        if resolved_country:
+            location_parts.append(resolved_country)
+        location_str = ", ".join(location_parts)
+
+        if search_query and location_str:
+            search_query = f"{search_query} in {location_str}"
+        elif not search_query and location_str:
+            parts = []
+            if query.industry_id:
+                from app.models.industry import Industry
+                industry = await db.get(Industry, query.industry_id)
+                if industry:
+                    parts.append(industry.name)
+            parts.append(location_str)
+            search_query = " ".join(parts)
+        elif not search_query and query.industry_id:
+            from app.models.industry import Industry
+            industry = await db.get(Industry, query.industry_id)
+            if industry:
+                search_query = industry.name
+
+        if search_query:
+            try:
+                from app.modules.ingestion.google_places import search_places, place_to_client_fields
+                from datetime import datetime, timezone
+
+                # Fetch places (which calls Gemini Flash fallback because Google Maps API key is commented out in .env)
+                data = await search_places(query=search_query)
+                places = data.get("places") or []
+                if places:
+                    new_client_ids = []
+                    for place in places:
+                        fields = place_to_client_fields(place)
+                        # Check for existing
+                        existing = await db.scalar(select(Client).where(Client.source_ref == fields["source_ref"]))
+                        if existing is None:
+                            client = Client(
+                                org_id=org_id,
+                                last_verified_at=datetime.now(timezone.utc),
+                                **fields
+                            )
+                            if query.industry_id:
+                                client.industry_id = query.industry_id
+                            db.add(client)
+                            await db.flush()
+                            new_client_ids.append(client.id)
+                        else:
+                            new_client_ids.append(existing.id)
+                    await db.commit()
+
+                    if new_client_ids:
+                        fallback_filters = [_visible_to_org(org_id), Client.id.in_(new_client_ids)]
+                        if resolved_lat is not None and resolved_lng is not None:
+                            fallback_filters.extend([Client.latitude.is_not(None), Client.longitude.is_not(None)])
+                        
+                        fallback_stmt = select(*select_cols).where(and_(*fallback_filters))
+                        if distance_m_expr is not None:
+                            fallback_stmt = fallback_stmt.order_by(distance_m_expr.asc(), Client.id.asc())
+                        else:
+                            fallback_stmt = fallback_stmt.order_by(Client.created_at.desc(), Client.id.asc())
+                        
+                        fallback_stmt = fallback_stmt.limit(query.limit + 1)
+                        rows = (await db.execute(fallback_stmt)).all()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).exception("Failed to dynamically search and ingest via Gemini: %s", e)
 
     has_more = len(rows) > query.limit
     rows = rows[: query.limit]

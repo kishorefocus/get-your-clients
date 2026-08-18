@@ -72,6 +72,7 @@ class ClientSearchRequest(BaseModel):
     industry_id: uuid.UUID | None = None
     country: str | None = None
     city: str | None = None
+    place_id: str | None = None
 
     # Radius search
     lat: float | None = Field(default=None, ge=-90, le=90)
@@ -92,10 +93,10 @@ class ClientSearchRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_geo_params(self):
-        has_radius = self.lat is not None and self.lng is not None and self.radius_km is not None
-        has_bbox = None not in (self.min_lat, self.max_lat, self.min_lng, self.max_lng)
-        if self.lat is not None or self.lng is not None or self.radius_km is not None:
-            if not has_radius:
+        if self.radius_km is not None and self.place_id is None and (self.lat is None or self.lng is None):
+            raise ValueError("radius_km requires either place_id or lat and lng to be provided")
+        if self.lat is not None or self.lng is not None:
+            if self.lat is None or self.lng is None or self.radius_km is None:
                 raise ValueError("lat, lng, and radius_km must all be provided together for radius search")
         return self
 

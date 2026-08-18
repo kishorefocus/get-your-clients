@@ -17,7 +17,9 @@ const defaultFilters: Filters = {
   keyword: "",
   industry: null,
   industryId: null,
-  country: null,
+  country: "",
+  city: "",
+  limit: 10,
   hasPhone: false,
   hasEmail: false,
   minRating: 0,
@@ -37,39 +39,76 @@ export default function DiscoveryPage() {
     fetchFromApi({
       keyword: filters.keyword || undefined,
       country: filters.country || undefined,
+      city: filters.city || undefined,
+      limit: filters.limit || undefined,
       industry_id: filters.industryId || undefined,
-      limit: 50,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch when keyword/country/industry filter changes (debounced via useMemo dependency)
+  // Re-fetch when keyword/country/city/limit/industry filter changes (debounced via useMemo dependency)
   useEffect(() => {
     const t = setTimeout(() => {
       fetchFromApi({
         keyword: filters.keyword || undefined,
         country: filters.country || undefined,
+        city: filters.city || undefined,
+        limit: filters.limit || undefined,
         industry_id: filters.industryId || undefined,
         min_rating: filters.minRating || undefined,
-        limit: 50,
       });
     }, 400);
     return () => clearTimeout(t);
-  }, [filters.keyword, filters.country, filters.industryId, filters.minRating, fetchFromApi]);
+  }, [filters.keyword, filters.country, filters.city, filters.limit, filters.industryId, filters.minRating, fetchFromApi]);
 
   const results = useMemo(() => {
+    console.log("useMemo run with filters:", filters, "leads count:", leads.length);
     return leads.filter((l) => {
-      if (filters.keyword && !`${l.name} ${l.category}`.toLowerCase().includes(filters.keyword.toLowerCase())) return false;
-      if (filters.industryId && l.industryId !== filters.industryId) return false;
-      if (filters.country && l.country !== filters.country) return false;
-      if (filters.hasPhone && !l.phone) return false;
-      if (filters.hasEmail && !l.email) return false;
-      if (filters.minRating && (l.rating ?? 0) < filters.minRating) return false;
-      if (filters.radiusKm && (l.distanceKm ?? 0) > filters.radiusKm) return false;
-      return true;
+      const isMock = l.id.startsWith("l");
+
+      if (isMock) {
+        // Apply strict client-side filtering to mock leads
+        if (filters.keyword) {
+          const matchesName = l.name.toLowerCase().includes(filters.keyword.toLowerCase());
+          const matchesCategory = l.category.toLowerCase().includes(filters.keyword.toLowerCase());
+          if (!matchesName && !matchesCategory) return false;
+        }
+        if (filters.industryId && l.industryId !== filters.industryId) return false;
+
+        if (filters.country) {
+          const countryTerm = filters.country.toLowerCase();
+          const matchesCountryName = l.country ? l.country.toLowerCase().includes(countryTerm) : false;
+          const matchesCountryCode = l.countryCode ? l.countryCode.toLowerCase().includes(countryTerm) : false;
+          const matchesAddress = l.address ? l.address.toLowerCase().includes(countryTerm) : false;
+          if (!matchesCountryName && !matchesCountryCode && !matchesAddress) return false;
+        }
+
+        if (filters.city) {
+          const cityTerm = filters.city.toLowerCase();
+          const matchesCityName = l.city ? l.city.toLowerCase().includes(cityTerm) : false;
+          const matchesAddress = l.address ? l.address.toLowerCase().includes(cityTerm) : false;
+          if (!matchesCityName && !matchesAddress) return false;
+        }
+
+        if (filters.hasPhone && !l.phone) return false;
+        if (filters.hasEmail && !l.email) return false;
+        if (filters.minRating && (l.rating ?? 0) < filters.minRating) return false;
+        if (filters.radiusKm && l.distanceKm != null && l.distanceKm > filters.radiusKm) return false;
+        return true;
+      } else {
+        // For real API leads, the API already filtered by keyword/city/country.
+        // We only filter by dynamic criteria like phone, email, rating, and radius locally.
+        if (filters.hasPhone && !l.phone) return false;
+        if (filters.hasEmail && !l.email) return false;
+        if (filters.minRating && (l.rating ?? 0) < filters.minRating) return false;
+        if (filters.radiusKm && l.distanceKm != null && l.distanceKm > filters.radiusKm) return false;
+        return true;
+      }
     });
   }, [filters, leads]);
 
+  console.log("results123 : ", results)
+  console.log("leads : ", leads)
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar title="Discovery" />
