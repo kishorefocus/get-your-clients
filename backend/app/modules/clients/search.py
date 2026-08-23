@@ -262,7 +262,12 @@ async def search_clients(
                     for place in places:
                         fields = place_to_client_fields(place)
                         # Check for existing
-                        existing = await db.scalar(select(Client).where(Client.source_ref == fields["source_ref"]))
+                        existing = await db.scalar(
+                            select(Client).where(
+                                Client.source_ref == fields["source_ref"],
+                                or_(Client.org_id == org_id, Client.org_id.is_(None))
+                            )
+                        )
                         if existing is None:
                             client = Client(
                                 org_id=org_id,
@@ -275,6 +280,10 @@ async def search_clients(
                             await db.flush()
                             new_client_ids.append(client.id)
                         else:
+                            for key, value in fields.items():
+                                if value is not None:
+                                    setattr(existing, key, value)
+                            existing.last_verified_at = datetime.now(timezone.utc)
                             new_client_ids.append(existing.id)
                     await db.commit()
 

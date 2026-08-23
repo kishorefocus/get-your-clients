@@ -23,7 +23,12 @@ INDEX_MAPPING = {
 
 @lru_cache
 def get_es_client() -> AsyncElasticsearch:
-    return AsyncElasticsearch(settings.elasticsearch_url, request_timeout=5)
+    return AsyncElasticsearch(
+        settings.elasticsearch_url,
+        request_timeout=0.5,
+        max_retries=0,
+        retry_on_timeout=False
+    )
 
 
 async def ensure_index() -> None:

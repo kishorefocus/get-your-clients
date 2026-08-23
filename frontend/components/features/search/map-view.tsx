@@ -101,14 +101,32 @@ export function MapView({
           </div>
 
           <div className="mt-3 flex gap-1.5">
-            {selected.phone && (
-              <Button size="sm" variant="secondary" className="h-7 flex-1 px-2 text-xs">
-                <Phone className="h-3.5 w-3.5" /> Call
+            {selected.phone ? (
+              <>
+                <a
+                  href={`tel:${selected.phone}`}
+                  className="flex-1"
+                >
+                  <Button size="sm" variant="secondary" className="h-7 w-full px-2 text-xs gap-1">
+                    <Phone className="h-3.5 w-3.5" /> Call
+                  </Button>
+                </a>
+                <a
+                  href={`https://wa.me/${selected.phone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1"
+                >
+                  <Button size="sm" variant="default" className="h-7 w-full px-2 text-xs gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" /> Message
+                  </Button>
+                </a>
+              </>
+            ) : (
+              <Button size="sm" variant="default" className="h-7 flex-1 px-2 text-xs gap-1" disabled>
+                <MessageSquare className="h-3.5 w-3.5" /> Message
               </Button>
             )}
-            <Button size="sm" variant="default" className="h-7 flex-1 px-2 text-xs">
-              <MessageSquare className="h-3.5 w-3.5" /> Message
-            </Button>
           </div>
         </div>
       )}

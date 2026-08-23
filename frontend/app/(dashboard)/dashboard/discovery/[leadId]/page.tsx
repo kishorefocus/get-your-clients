@@ -242,9 +242,28 @@ export default function ClientProfilePage() {
                 {lead.savedByMe ? "Saved" : "Save"}
               </Button>
               {lead.phone && (
-                <Button variant="secondary" size="sm"><Phone className="h-3.5 w-3.5" /> Call</Button>
+                <a href={`tel:${lead.phone}`} className="inline-block">
+                  <Button variant="secondary" size="sm" className="gap-1">
+                    <Phone className="h-3.5 w-3.5" /> Call
+                  </Button>
+                </a>
               )}
-              <Button size="sm"><MessageSquare className="h-3.5 w-3.5" /> Message</Button>
+              {lead.phone ? (
+                <a
+                  href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <Button size="sm" className="gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" /> Message
+                  </Button>
+                </a>
+              ) : (
+                <Button size="sm" className="gap-1" disabled>
+                  <MessageSquare className="h-3.5 w-3.5" /> Message
+                </Button>
+              )}
             </div>
           </div>
 

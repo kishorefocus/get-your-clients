@@ -28,7 +28,7 @@ const defaultFilters: Filters = {
 
 export default function DiscoveryPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [view, setView] = useState<ViewMode>("split");
+  const [view, setView] = useState<ViewMode>("list");
   const [activeId, setActiveId] = useState<string | null>(null);
   const leads = useLeadsStore((s) => s.leads);
   const isLoadingFromApi = useLeadsStore((s) => s.isLoadingFromApi);

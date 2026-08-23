@@ -109,7 +109,21 @@ export function InteractiveMap({
     // Add zoom control at top-right
     L.control.zoom({ position: "topright" }).addTo(map);
 
+    // Call invalidateSize on container resize using ResizeObserver
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(containerRef.current);
+
+    // Fire immediately and also with a small delay to handle initial layout and animations
+    map.invalidateSize();
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
     return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -242,6 +256,7 @@ export function InteractiveMap({
     const map = mapRef.current;
     if (!map || validLeads.length === 0) return;
 
+    map.invalidateSize();
     const bounds = L.latLngBounds(validLeads.map((l) => [l.lat, l.lng]));
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
   }, [leadsHash, validLeads]);
@@ -253,6 +268,7 @@ export function InteractiveMap({
 
     const activeLead = validLeads.find((l) => l.id === activeId);
     if (activeLead) {
+      map.invalidateSize();
       map.setView([activeLead.lat, activeLead.lng], Math.max(map.getZoom(), 12), {
         animate: true,
         duration: 0.5,

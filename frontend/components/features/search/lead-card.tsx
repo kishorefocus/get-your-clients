@@ -124,17 +124,39 @@ export function LeadCard({
 
             {lead.phone && (
               <motion.div {...tapProps}>
-                <Button size="sm" variant="secondary" className="h-7 px-2 text-xs gap-1">
-                  <Phone className="h-3.5 w-3.5" /> Call
-                </Button>
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block"
+                >
+                  <Button size="sm" variant="secondary" className="h-7 px-2 text-xs gap-1">
+                    <Phone className="h-3.5 w-3.5" /> Call
+                  </Button>
+                </a>
               </motion.div>
             )}
 
-            <motion.div {...tapProps}>
-              <Button size="sm" variant="default" className="h-7 px-2 text-xs gap-1">
-                <MessageSquare className="h-3.5 w-3.5" /> Message
-              </Button>
-            </motion.div>
+            {lead.phone ? (
+              <motion.div {...tapProps}>
+                <a
+                  href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block"
+                >
+                  <Button size="sm" variant="default" className="h-7 px-2 text-xs gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" /> Message
+                  </Button>
+                </a>
+              </motion.div>
+            ) : (
+              <motion.div {...tapProps}>
+                <Button size="sm" variant="default" className="h-7 px-2 text-xs gap-1" disabled>
+                  <MessageSquare className="h-3.5 w-3.5" /> Message
+                </Button>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

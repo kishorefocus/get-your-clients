@@ -30,6 +30,72 @@ GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 _FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.location,places.internationalPhoneNumber,places.websiteUri,places.rating,places.types"
 
 
+def classify_business_topic(keyword: str) -> str:
+    kw = keyword.lower()
+    
+    # SABs
+    sabs = [
+        "ai automation", "web development", "app & web", "personal brand", "marketing agenc", 
+        "ghostwriting", "virtual assistant", "seo", "content strategy", "gamified learning", 
+        "meal prep", "tech support", "it & tech", "cleaning", "pet grooming", 
+        "waste removal", "recycling", "organization"
+    ]
+    for s in sabs:
+        if s in kw:
+            return "SAB"
+            
+    # Storefronts
+    storefronts = [
+        "bar", "coffee", "catering", "bakery", "fitness", "gym", "styling", "boutique", 
+        "daycare", "salon", "barbershop", "property management", "leasing office", 
+        "farming", "farm stand", "pick-your-own"
+    ]
+    for sf in storefronts:
+        if sf in kw:
+            return "Storefront"
+            
+    # Online
+    online = [
+        "saas", "software as a service", "virtual reality", "vr training", 
+        "beverage brand", "coaching", "consulting", "resale store", 
+        "dropshipping", "products", "crafts", "etsy"
+    ]
+    for o in online:
+        if o in kw:
+            return "Online"
+            
+    return "Storefront"
+
+
+def extract_city_country_from_place(place: dict) -> tuple[str | None, str | None]:
+    city = place.get("city")
+    country = place.get("country")
+    if city and country:
+        return city, country
+
+    # Check addressComponents
+    for comp in place.get("addressComponents", []):
+        types = comp.get("types", [])
+        if "locality" in types:
+            city = comp.get("longText")
+        elif "country" in types:
+            country = comp.get("shortText")
+
+    # Fallback: Parse from formattedAddress
+    addr = place.get("formattedAddress") or ""
+    if addr and (not city or not country):
+        parts = [p.strip() for p in addr.split(",") if p.strip()]
+        if parts:
+            if not country:
+                country = parts[-1]
+            if not city and len(parts) >= 2:
+                if len(parts) >= 3:
+                    city = parts[-3]
+                else:
+                    city = parts[-2]
+    return city, country
+
+
 def _generate_mock_places(query: str) -> dict:
     keyword = query
     location = "Palakkad, Kerala, India"
@@ -38,16 +104,75 @@ def _generate_mock_places(query: str) -> dict:
         keyword = parts[0].strip()
         location = parts[1].strip()
     
+    city = "Palakkad"
+    country = "IN"
+    state = ""
+    
+    loc_parts = [p.strip() for p in location.split(",") if p.strip()]
+    if len(loc_parts) == 1:
+        city = loc_parts[0]
+    elif len(loc_parts) >= 2:
+        city = loc_parts[0]
+        last_part = loc_parts[-1]
+        if last_part.lower() in ["us", "usa", "united states"]:
+            country = "US"
+            if len(loc_parts) == 3:
+                state = loc_parts[1]
+        elif last_part.lower() in ["uk", "united kingdom", "gb"]:
+            country = "GB"
+        elif last_part.lower() in ["in", "india"]:
+            country = "IN"
+            if len(loc_parts) == 3:
+                state = loc_parts[1]
+        else:
+            country = last_part
+
+    # Coordinates for common testing locations
+    known_cities = {
+        "austin": (30.2672, -97.7431, "US", "TX"),
+        "new york": (40.7128, -74.0060, "US", "NY"),
+        "san francisco": (37.7749, -122.4194, "US", "CA"),
+        "miami": (25.7617, -80.1918, "US", "FL"),
+        "chicago": (41.8781, -87.6298, "US", "IL"),
+        "los angeles": (34.0522, -118.2437, "US", "CA"),
+        "london": (51.5074, -0.1278, "GB", ""),
+        "toronto": (43.6532, -79.3832, "CA", "ON"),
+        "sydney": (-33.8688, 151.2093, "AU", "NSW"),
+        "palakkad": (10.7788, 76.653, "IN", "KL"),
+        "bangalore": (12.9716, 77.5946, "IN", "KA"),
+        "bengaluru": (12.9716, 77.5946, "IN", "KA"),
+        "paris": (48.8566, 2.3522, "FR", ""),
+        "berlin": (52.5200, 13.4050, "DE", ""),
+    }
+
+    base_lat, base_lng = 10.7788, 76.653
+    city_lower = city.lower()
+    matched = False
+    for k, v in known_cities.items():
+        if k in city_lower:
+            base_lat, base_lng, country, state = v
+            matched = True
+            break
+            
+    if not matched:
+        # Determine coordinates from city name hash
+        import hashlib
+        h = int(hashlib.md5(city_lower.encode('utf-8')).hexdigest(), 16)
+        base_lat = -40.0 + (h % 8000) / 100.0
+        base_lng = -120.0 + ((h >> 16) % 24000) / 100.0
+
+    btype = classify_business_topic(keyword)
     keyword_cap = " ".join(word.capitalize() for word in keyword.split())
     
+    if btype == "SAB":
+        suffixes = ["Group", "Agency", "Studios", "Partners", "Solutions", "Services", "Experts"]
+    elif btype == "Online":
+        suffixes = ["SaaS", "Platform", "Online", "Digital", "Hub", "Systems", "Net", "Brand"]
+    else:
+        suffixes = ["Shop", "Cafe", "Bakery", "Gym", "Studio", "Boutique", "Salon", "Market", "Center"]
+        
     places = []
-    suffixes = [
-        "Store", "Showroom", "Hub", "World", "Zone", "Point", "House", "Agency"
-    ] if "showroom" in keyword.lower() or "store" in keyword.lower() else [
-        "Center", "Enterprises", "Solutions", "Associates", "Services", "Group", "Hub", "Partners"
-    ]
-    
-    for i in range(1, 21): # generate 20 results
+    for i in range(1, 21):
         suffix = suffixes[i % len(suffixes)]
         name = f"{keyword_cap} {suffix}"
         if i == 1:
@@ -56,17 +181,26 @@ def _generate_mock_places(query: str) -> dict:
             name = f"Royal {keyword_cap}"
             
         place_id = f"mock_place_{keyword.replace(' ', '_')}_{i}"
-        address = f"{i * 12}, Main Road, near Town Junction, {location}"
         
-        latitude = 10.7788 + (i * 0.005) - 0.02
-        longitude = 76.653 + (i * 0.005) - 0.02
+        state_str = f", {state}" if state else ""
+        if btype == "SAB":
+            address = f"Servicing {city} and surrounding areas{state_str}, {country}"
+        elif btype == "Online":
+            address = f"Digital / E-commerce HQ, {city}{state_str}, {country}"
+        else:
+            address = f"{i * 12} Main Street, {city}{state_str}, {country}"
+            
+        latitude = base_lat + (i * 0.003) - 0.03
+        longitude = base_lng + (i * 0.003) - 0.03
         
         places.append({
             "id": place_id,
             "displayName": { "text": name },
             "formattedAddress": address,
+            "city": city,
+            "country": country,
             "location": { "latitude": latitude, "longitude": longitude },
-            "internationalPhoneNumber": f"+91 491 25{i} 1234",
+            "internationalPhoneNumber": f"+1 512 55{i} 1234" if country == "US" else f"+91 491 25{i} 1234",
             "websiteUri": f"https://www.{keyword.replace(' ', '')}{i}.com",
             "rating": round(3.8 + (i * 0.15) % 1.2, 1),
             "types": [keyword.replace(" ", "_")]
@@ -82,9 +216,10 @@ def _get_gemini_model():
     api_key = settings.gemini_api_key or os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("Neither GOOGLE_MAPS_API_KEY nor GEMINI_API_KEY is configured")
+    if not api_key.startswith("AIzaSy"):
+        raise ValueError("Invalid/dummy GEMINI_API_KEY format")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-3.5-flash')
-
+    return genai.GenerativeModel('gemini-1.5-flash')
 
 
 async def _gemini_search_places(query: str, page_token: str | None = None) -> dict:
@@ -104,6 +239,8 @@ async def _gemini_search_places(query: str, page_token: str | None = None) -> di
           "id": "str (a unique place ID, e.g. 'gemini_place_1')",
           "displayName": {{ "text": "str (name of business)" }},
           "formattedAddress": "str (full address)",
+          "city": "str (city name)",
+          "country": "str (two letter ISO country code, e.g. 'US')",
           "location": {{ "latitude": float, "longitude": float }},
           "internationalPhoneNumber": "str or null (phone number)",
           "websiteUri": "str or null (website URL)",
@@ -231,9 +368,33 @@ async def search_places(*, query: str, page_token: str | None = None) -> dict:
 def place_to_client_fields(place: dict) -> dict:
     """Maps a Places API (New) place object to our Client model's fields, keeping only permitted-for-cache data."""
     location = place.get("location", {})
+    city, country = extract_city_country_from_place(place)
+    
+    country_iso = None
+    if country:
+        c = country.strip().lower()
+        mapping = {
+            "india": "IN",
+            "united states": "US",
+            "usa": "US",
+            "united kingdom": "GB",
+            "uk": "GB",
+            "canada": "CA",
+            "australia": "AU",
+            "germany": "DE",
+            "france": "FR",
+            "italy": "IT",
+            "spain": "ES",
+        }
+        country_iso = mapping.get(c, country).upper()
+        if len(country_iso) > 2:
+            country_iso = country_iso[:2]
+            
     return {
         "name": place.get("displayName", {}).get("text", "Unknown"),
         "address": place.get("formattedAddress"),
+        "city": city,
+        "country": country_iso,
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
         "phone": place.get("internationalPhoneNumber"),
@@ -242,6 +403,7 @@ def place_to_client_fields(place: dict) -> dict:
         "source": "google_places",
         "source_ref": place.get("id"),  # Google place_id — used to deep-link back for full details
     }
+
 
 
 async def geocode_address(address: str) -> tuple[float, float] | None:
