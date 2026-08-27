@@ -26,6 +26,7 @@ export interface Lead {
   assignedRep?: string;
   tags: string[];
   industryId?: string;
+  isLocked?: boolean;
 }
 
 export interface TeamMember {

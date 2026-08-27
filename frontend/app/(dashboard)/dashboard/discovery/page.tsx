@@ -1,17 +1,202 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { List, Map as MapIcon, Columns2 } from "lucide-react";
+import { 
+  List, Map as MapIcon, Columns2, 
+  Sparkles, Brain, MapPin, Building, Search, 
+  Briefcase, CheckCircle2, RotateCcw, ChevronDown, ChevronUp 
+} from "lucide-react";
 import { Topbar } from "@/components/features/layout/topbar";
+import { Button } from "@/components/ui/button";
 import { FilterSidebar, Filters } from "@/components/features/search/filter-sidebar";
 import { LeadCard } from "@/components/features/search/lead-card";
 import { MapView } from "@/components/features/search/map-view";
 import { useLeadsStore } from "@/lib/stores/leads-store";
+import { useMyOrg } from "@/lib/hooks/use-org";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainerFast, fadeIn, fadeUp, springUI, tapProps } from "@/lib/motion";
+import { staggerContainerFast, fadeIn, fadeUp, springUI, tapProps, cardHoverProps } from "@/lib/motion";
 
 type ViewMode = "list" | "map" | "split";
+
+export interface BusinessTemplate {
+  category: string;
+  idealClients: string;
+  searchKeywords: string[];
+}
+
+export const BUSINESS_TEMPLATES = [
+  // Tech & Digital Agencies
+  {
+    category: "App & Web Development Company",
+    idealClients: "Local brick-and-mortar stores needing e-commerce setups, established offline businesses looking to modernize, and funded startups requiring custom platforms.",
+    searchKeywords: ["retail store", "e-commerce setups", "startups"]
+  },
+  {
+    category: "AI Automation Agency",
+    idealClients: "Real estate agencies, online retailers, and customer support centers looking to deploy AI chatbots and automate workflows.",
+    searchKeywords: ["real estate agency", "online retail", "customer support center"]
+  },
+  {
+    category: "SaaS (Software as a Service) Provider",
+    idealClients: "Niche business owners (e.g., salon management software for salon owners, scheduling tools for personal trainers).",
+    searchKeywords: ["salon", "personal trainer", "fitness studio"]
+  },
+  {
+    category: "SEO & Content Strategy Firm",
+    idealClients: "High-ticket local service providers like law firms, medical clinics, and dental practices wanting to rank higher on Google.",
+    searchKeywords: ["law firm", "medical clinic", "dental practice"]
+  },
+  {
+    category: "Personal Brand Marketing Agency",
+    idealClients: "Corporate executives, startup founders, authors, and high-earning consultants looking to build their LinkedIn or personal audience.",
+    searchKeywords: ["consulting firm", "startup founder", "executive coaching"]
+  },
+  {
+    category: "Ghostwriting Services",
+    idealClients: "Busy CEOs, venture capitalists, and industry experts who need high-quality essays, books, or newsletters written under their name.",
+    searchKeywords: ["ceo office", "venture capital firm", "consultancy"]
+  },
+  {
+    category: "Virtual Assistant (VA) Agency",
+    idealClients: "Solo entrepreneurs, digital creators, and small business owners overwhelmed by administrative tasks and emails.",
+    searchKeywords: ["solopreneur", "digital creator", "small business"]
+  },
+  {
+    category: "Gamified Learning & EdTech Developer",
+    idealClients: "Corporate HR departments looking for interactive onboarding programs, and private K-12 schools seeking digital learning tools.",
+    searchKeywords: ["corporate HR", "private school", "learning academy"]
+  },
+  {
+    category: "IT & Remote Tech Support",
+    idealClients: "Local accounting firms, law offices, and small businesses without an in-house IT department.",
+    searchKeywords: ["accounting firm", "law office", "small business"]
+  },
+  {
+    category: "Virtual Reality (VR) Training Agency",
+    idealClients: "Industrial manufacturing plants, aviation schools, and medical institutions needing risk-free simulation training for staff.",
+    searchKeywords: ["manufacturing plant", "aviation school", "medical institution"]
+  },
+  // Professional & Lifestyle Services
+  {
+    category: "Online Coaching & Consulting",
+    idealClients: "Mid-career professionals seeking career pivots, or individuals looking for specialized language or business skills.",
+    searchKeywords: ["professional services", "career coaching", "language school"]
+  },
+  {
+    category: "Property Management Agency",
+    idealClients: "Busy real estate investors, out-of-state landlords, and multi-property owners who don't want to handle tenant issues.",
+    searchKeywords: ["real estate investor", "landlord", "apartment complex"]
+  },
+  {
+    category: "Daycare Services",
+    idealClients: "Dual-income households, busy working parents, and families without nearby childcare support.",
+    searchKeywords: ["working parents", "family household", "daycare needs"]
+  },
+  {
+    category: "Personal Styling & Wardrobe Consulting",
+    idealClients: "High-profile professionals, public speakers, and individuals undergoing major life or career transitions.",
+    searchKeywords: ["public speaker", "executive", "professional studio"]
+  },
+  {
+    category: "Home Organization & Decluttering",
+    idealClients: "Affluent families moving into new homes, downsizers, and busy professionals struggling with chaotic living spaces.",
+    searchKeywords: ["moving company", "family residence", "real estate office"]
+  },
+  {
+    category: "Mobile Pet Grooming",
+    idealClients: "Elderly pet owners, busy remote workers, and owners of highly anxious pets who prefer at-home service.",
+    searchKeywords: ["pet owner", "veterinary clinic", "dog training center"]
+  },
+  {
+    category: "Eco-Friendly Residential Cleaning",
+    idealClients: "Health-conscious families, professionals with demanding schedules, and Airbnb hosts requiring fast turnovers.",
+    searchKeywords: ["airbnb host", "residential family", "boutique hotel"]
+  },
+  // Food, Hospitality & Retail
+  {
+    category: "Hybrid Bar & Coffee Shop",
+    idealClients: "Remote workers and students during the day; young professionals, couples, and social groups during evenings and weekends.",
+    searchKeywords: ["remote worker", "student association", "young professional group"]
+  },
+  {
+    category: "Catering Services",
+    idealClients: "Event planners, corporate office managers hosting luncheons, and couples planning weddings.",
+    searchKeywords: ["event planner", "office manager", "wedding coordinator"]
+  },
+  {
+    category: "Cloud Kitchen or Artisan Bakery",
+    idealClients: "Local food enthusiasts, people celebrating birthdays/events, and local cafes looking to outsource their pastry inventory.",
+    searchKeywords: ["local cafe", "bakery outlet", "restaurant"]
+  },
+  {
+    category: "Specialty Beverage Brand",
+    idealClients: "Health-conscious consumers, millennials, and sober-curious individuals looking for premium, non-alcoholic lifestyle drinks.",
+    searchKeywords: ["health store", "cafe", "supermarket"]
+  },
+  {
+    category: "Fitness Studio & Gym",
+    idealClients: "Health-conscious individuals, local residents looking for community-driven workouts, and fitness enthusiasts.",
+    searchKeywords: ["local resident", "fitness club", "gym enthusiast"]
+  },
+  {
+    category: "Salon & Barbershop",
+    idealClients: "Neighborhood residents, professionals maintaining a groomed appearance, and clients seeking specialized hair treatments.",
+    searchKeywords: ["neighborhood resident", "groomed professional", "hair clinic"]
+  },
+  {
+    category: "Personal Styling Boutique",
+    idealClients: "Local fashion enthusiasts looking for unique apparel curated away from mass-market fast fashion.",
+    searchKeywords: ["fashion designer", "local boutique", "apparel brand"]
+  },
+  // E-Commerce & Supply Chain
+  {
+    category: "Dropshipping Business",
+    idealClients: "Retail bargain hunters, impulse social media buyers, and consumers looking for trendy novelty products.",
+    searchKeywords: ["bargain hunter", "impulse buyer", "retail outlet"]
+  },
+  {
+    category: "Online Resale Store",
+    idealClients: "Eco-conscious shoppers, vintage fashion collectors, and budget-focused parents looking for gently used children's items.",
+    searchKeywords: ["vintage collector", "eco shopper", "thrift shop"]
+  },
+  {
+    category: "Eco-Friendly Household Products Shop",
+    idealClients: "Zero-waste advocates, environmentally conscious homeowners, and sustainable lifestyle enthusiasts.",
+    searchKeywords: ["homeowner", "zero waste advocate", "sustainable store"]
+  },
+  {
+    category: "Handmade Crafts (Etsy/Direct)",
+    idealClients: "Gift shoppers looking for personalized items, home decorators seeking unique art pieces, and collectors.",
+    searchKeywords: ["gift shop", "interior designer", "home decorator"]
+  },
+  {
+    category: "Organic Farming & Produce Delivery",
+    idealClients: "Health-conscious families, farm-to-table restaurants, and local culinary enthusiasts who value fresh, pesticide-free food.",
+    searchKeywords: ["farm to table restaurant", "local family", "gourmet chef"]
+  },
+  {
+    category: "Waste Removal & Recycling Service",
+    idealClients: "Homeowners undergoing renovations, property managers cleaning out evicted units, and commercial construction sites.",
+    searchKeywords: ["contractor", "property manager", "renovation service"]
+  }
+];
+
+export const BUSINESS_GROUPS = {
+  "Tech & Digital": BUSINESS_TEMPLATES.slice(0, 10),
+  "Services": BUSINESS_TEMPLATES.slice(10, 17),
+  "Food & Retail": BUSINESS_TEMPLATES.slice(17, 24),
+  "E-Commerce": BUSINESS_TEMPLATES.slice(24, 30)
+};
+
+function parseLocation(locStr: string): { city: string; country: string } {
+  if (!locStr) return { city: "", country: "" };
+  const parts = locStr.split(",").map(p => p.trim());
+  if (parts.length === 1) {
+    return { city: parts[0], country: "" };
+  }
+  return { city: parts[0], country: parts[parts.length - 1] };
+}
 
 const defaultFilters: Filters = {
   keyword: "",
@@ -28,11 +213,33 @@ const defaultFilters: Filters = {
 
 export default function DiscoveryPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
   const [activeId, setActiveId] = useState<string | null>(null);
   const leads = useLeadsStore((s) => s.leads);
   const isLoadingFromApi = useLeadsStore((s) => s.isLoadingFromApi);
   const fetchFromApi = useLeadsStore((s) => s.fetchFromApi);
+
+  const { data: myOrg } = useMyOrg();
+  const isFree = myOrg?.plan === "free";
+
+  // AI Finder Wizard states
+  const [yourBusinessName, setYourBusinessName] = useState("");
+  const [yourLocation, setYourLocation] = useState("");
+  const [clientLocation, setClientLocation] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<typeof BUSINESS_TEMPLATES[number] | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("Tech & Digital");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState<number>(0);
+  const [isWizardCollapsed, setIsWizardCollapsed] = useState(false);
+  const [aiReport, setAiReport] = useState<{
+    businessName: string;
+    businessLocation: string;
+    targetLocation: string;
+    idealClients: string;
+    keywords: string[];
+  } | null>(null);
+  const [selectedKeywordIndex, setSelectedKeywordIndex] = useState<number>(0);
 
   // Fetch real clients from backend on mount
   useEffect(() => {
@@ -63,7 +270,7 @@ export default function DiscoveryPage() {
 
   const results = useMemo(() => {
     console.log("useMemo run with filters:", filters, "leads count:", leads.length);
-    return leads.filter((l) => {
+    const filtered = leads.filter((l) => {
       const isMock = l.id.startsWith("l");
 
       if (isMock) {
@@ -105,7 +312,100 @@ export default function DiscoveryPage() {
         return true;
       }
     });
-  }, [filters, leads]);
+
+    return filtered.map((l, index) => {
+      if (isFree) {
+        const isClaimed = l.savedByMe || l.stage !== "new";
+        const shouldLock = index >= 3 && !isClaimed;
+        return {
+          ...l,
+          isLocked: l.id.startsWith("l") ? shouldLock : (l.isLocked || shouldLock)
+        };
+      }
+      return { ...l, isLocked: false };
+    });
+  }, [filters, leads, isFree]);
+
+  const handleTemplateSelect = (template: typeof BUSINESS_TEMPLATES[number]) => {
+    setSelectedTemplate(template);
+    setYourBusinessName(template.category);
+  };
+
+  const handleAiSearch = () => {
+    if (!yourBusinessName.trim()) {
+      alert("Please select a business bubble or type your business type.");
+      return;
+    }
+    if (!clientLocation.trim()) {
+      alert("Please enter target location for clients.");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisStep(0);
+
+    // Simulate AI pipeline progression
+    setTimeout(() => {
+      setAnalysisStep(1);
+      setTimeout(() => {
+        setAnalysisStep(2);
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          const currentTemplate = selectedTemplate || BUSINESS_TEMPLATES.find(t => 
+            t.category.toLowerCase().includes(yourBusinessName.toLowerCase())
+          ) || {
+            category: yourBusinessName,
+            idealClients: `Custom Persona: Local businesses in need of ${yourBusinessName} services.`,
+            searchKeywords: [yourBusinessName, "services", "agencies"]
+          };
+
+          const report = {
+            businessName: yourBusinessName,
+            businessLocation: yourLocation || "Global",
+            targetLocation: clientLocation,
+            idealClients: currentTemplate.idealClients,
+            keywords: currentTemplate.searchKeywords
+          };
+
+          setAiReport(report);
+          setSelectedKeywordIndex(0);
+
+          // Parse and trigger api search
+          const parsed = parseLocation(clientLocation);
+          const queryKeyword = currentTemplate.searchKeywords[0];
+          
+          setFilters(prev => ({
+            ...prev,
+            keyword: queryKeyword,
+            city: parsed.city,
+            country: parsed.country
+          }));
+        }, 600);
+      }, 600);
+    }, 400);
+  };
+
+  const handleKeywordSelect = (index: number) => {
+    if (!aiReport) return;
+    setSelectedKeywordIndex(index);
+    const kw = aiReport.keywords[index];
+    const parsed = parseLocation(aiReport.targetLocation);
+    setFilters(prev => ({
+      ...prev,
+      keyword: kw,
+      city: parsed.city,
+      country: parsed.country
+    }));
+  };
+
+  const handleResetAi = () => {
+    setAiReport(null);
+    setYourBusinessName("");
+    setSelectedTemplate(null);
+    setYourLocation("");
+    setClientLocation("");
+    setFilters(defaultFilters);
+  };
 
   console.log("results123 : ", results)
   console.log("leads : ", leads)
@@ -114,9 +414,303 @@ export default function DiscoveryPage() {
       <Topbar title="Discovery" />
 
       <div className="flex min-h-0 flex-1">
-        <FilterSidebar filters={filters} onChange={setFilters} resultCount={results.length} />
+        <FilterSidebar filters={filters} onChange={setFilters} resultCount={results.length} isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col bg-background/50">
+          
+          {/* AI Client Discovery Engine Card */}
+          <div className="border-b border-border/80 bg-gradient-to-br from-card/85 via-card/75 to-surface/90 backdrop-blur-lg p-5 shadow-lg shadow-primary/5 transition-all duration-300 relative overflow-hidden">
+            {/* Glowing accent ambient lights */}
+            <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-primary/10 blur-[80px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-accent/15 blur-[60px] pointer-events-none" />
+            
+            <div className="max-w-7xl mx-auto relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Brain className="h-4.5 w-4.5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+                      AI Client Discovery Engine <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-mono">BETA</span>
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground">Select your business type and client location to identify target prospects.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(yourBusinessName || clientLocation || aiReport) && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 hover:text-danger" onClick={handleResetAi}>
+                      <RotateCcw className="h-3 w-3" /> Clear
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setIsWizardCollapsed(!isWizardCollapsed)}
+                    title={isWizardCollapsed ? "Expand Wizard" : "Collapse Wizard"}
+                  >
+                    {isWizardCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {!isWizardCollapsed && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden space-y-4"
+                  >
+                    {/* Tabs & Bubbles Grid */}
+                    <div className="space-y-2">
+                      <div className="flex border-b border-border/60 pb-1 gap-4 overflow-x-auto scrollbar-none">
+                        {Object.keys(BUSINESS_GROUPS).map((group) => (
+                          <button
+                            key={group}
+                            onClick={() => setActiveTab(group)}
+                            className={cn(
+                              "text-xs font-semibold pb-1 border-b-2 px-1 transition-colors whitespace-nowrap",
+                              activeTab === group
+                                ? "border-primary text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {group}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-muted/20 rounded-md scrollbar-thin">
+                        {BUSINESS_GROUPS[activeTab as keyof typeof BUSINESS_GROUPS].map((t) => {
+                          const isSelected = selectedTemplate?.category === t.category;
+                          return (
+                            <button
+                              key={t.category}
+                              onClick={() => handleTemplateSelect(t)}
+                              className={cn(
+                                "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 focus-visible:outline-ring",
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-primary shadow-subtle"
+                                  : "border-border/80 text-muted-foreground hover:bg-muted hover:text-foreground bg-card"
+                              )}
+                            >
+                              {t.category}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Inputs & AI Report Grid */}
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                      <div className="lg:col-span-2 space-y-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <Building className="h-3 w-3" /> Your Business
+                            </label>
+                            <input
+                              type="text"
+                              value={yourBusinessName}
+                              onChange={(e) => {
+                                setYourBusinessName(e.target.value);
+                                setSelectedTemplate(null);
+                              }}
+                              placeholder="e.g. Apex AI Labs"
+                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <MapPin className="h-3 w-3" /> Your Location
+                            </label>
+                            <input
+                              type="text"
+                              value={yourLocation}
+                              onChange={(e) => setYourLocation(e.target.value)}
+                              placeholder="e.g. Palakkad, Kerala"
+                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <Search className="h-3 w-3" /> Target Client Location
+                            </label>
+                            <input
+                              type="text"
+                              value={clientLocation}
+                              onChange={(e) => setClientLocation(e.target.value)}
+                              placeholder="e.g. London, UK"
+                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <p className="text-[10px] text-muted-foreground italic">
+                            * AI searches local Google Places + maps profiles dynamically in your target area.
+                          </p>
+                          <Button
+                            size="sm"
+                            className="h-8 px-4 text-xs gap-1.5 bg-gradient-to-r from-primary to-accent hover:opacity-95 shadow-md shadow-primary/10"
+                            onClick={handleAiSearch}
+                            disabled={isAnalyzing}
+                          >
+                            {isAnalyzing ? (
+                              <>
+                                <span className="h-3 w-3 animate-spin rounded-full border border-background border-t-transparent" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-3.5 w-3.5 text-primary-foreground fill-primary-foreground/25" />
+                                Identify Clients & Search
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* AI Report Card */}
+                      <div className="lg:col-span-1 rounded-xl border border-border/85 bg-card/40 backdrop-blur-md p-4 min-h-[180px] flex flex-col justify-between relative overflow-hidden shadow-inner">
+                        {isAnalyzing ? (
+                          <div className="flex flex-col items-center justify-center py-6 flex-1 space-y-4">
+                            {/* Futuristic Radar Scanner */}
+                            <div className="relative h-16 w-16 flex items-center justify-center">
+                              {/* Radar Sweep Line */}
+                              <motion.div
+                                className="absolute inset-0 rounded-full border border-primary/20 bg-gradient-to-tr from-primary/10 to-transparent"
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                              />
+                              {/* Concentric Pulsating Rings */}
+                              <motion.div
+                                className="absolute inset-0 rounded-full border border-primary/40"
+                                initial={{ scale: 0.6, opacity: 0.8 }}
+                                animate={{ scale: 1.2, opacity: 0 }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
+                              />
+                              <motion.div
+                                className="absolute inset-0 rounded-full border border-accent/30"
+                                initial={{ scale: 0.4, opacity: 1 }}
+                                animate={{ scale: 1.4, opacity: 0 }}
+                                transition={{ repeat: Infinity, duration: 1.8, delay: 0.4, ease: "easeOut" }}
+                              />
+                              {/* Center Brain Icon */}
+                              <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 border border-primary/40 shadow-lg shadow-primary/20">
+                                <Brain className="h-5 w-5 text-primary animate-pulse" />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 text-center relative z-10">
+                              <p className="text-[11px] font-semibold text-foreground tracking-wide uppercase font-mono">AI Scan Pipeline</p>
+                              <div className="flex flex-col gap-1 items-center justify-center">
+                                <motion.p 
+                                  key={analysisStep}
+                                  initial={{ opacity: 0, y: 5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -5 }}
+                                  className="text-[10px] text-muted-foreground font-medium animate-pulse"
+                                >
+                                  {analysisStep === 0 && "🧬 Analyzing business model..."}
+                                  {analysisStep === 1 && "🎯 Mapping ideal client profiles..."}
+                                  {analysisStep === 2 && "📡 Identifying regional targets..."}
+                                </motion.p>
+                                {/* Step Dots */}
+                                <div className="flex gap-1.5 mt-1 justify-center">
+                                  {[0, 1, 2].map((s) => (
+                                    <div
+                                      key={s}
+                                      className={cn(
+                                        "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                                        analysisStep === s 
+                                          ? "bg-primary scale-125 shadow-sm shadow-primary"
+                                          : s < analysisStep 
+                                          ? "bg-success" 
+                                          : "bg-muted-foreground/30"
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : aiReport ? (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className="space-y-3 flex-1 flex flex-col justify-between h-full"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] bg-gradient-to-r from-primary to-accent text-white px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold shadow-sm shadow-primary/10">Ideal Persona Profile</span>
+                              </div>
+                              <p className="text-[11px] leading-relaxed text-foreground font-medium bg-card/60 p-2.5 rounded-lg border border-border/65 shadow-subtle max-h-24 overflow-y-auto scrollbar-thin">
+                                {aiReport.idealClients}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2 pt-2.5 border-t border-border/60">
+                              <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider block">Identified Client Types (Click to Search)</span>
+                              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto scrollbar-none">
+                                {aiReport.keywords.map((kw, i) => (
+                                  <motion.button
+                                    key={kw}
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => handleKeywordSelect(i)}
+                                    className={cn(
+                                      "text-[10px] px-2.5 py-1 rounded-full border transition-all duration-150 relative overflow-hidden",
+                                      selectedKeywordIndex === i
+                                        ? "border-primary bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/15"
+                                        : "border-border bg-card/80 hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    {kw}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-6 flex-1 text-center space-y-2">
+                            <Sparkles className="h-6 w-6 text-muted-foreground/60 animate-pulse" />
+                            <p className="text-xs font-semibold text-muted-foreground">AI Persona Analysis</p>
+                            <p className="text-[10px] text-muted-foreground max-w-[200px]">Select bubbles or enter details to see identified ideal clients.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {isWizardCollapsed && (
+                <div className="flex items-center justify-between text-xs py-1 border-t border-border/40 mt-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span>
+                      Targeting: <strong className="text-foreground">{yourBusinessName || "Custom Search"}</strong>
+                      {clientLocation && <> in <strong className="text-foreground">{clientLocation}</strong></>}
+                    </span>
+                  </div>
+                  {aiReport && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground">Ideal Clients:</span>
+                      <span className="bg-background/80 px-2 py-0.5 rounded border border-border/40 text-[10px] text-foreground font-medium truncate max-w-sm">
+                        {aiReport.idealClients}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
             <div className="text-sm text-muted-foreground flex items-center gap-1.5">
               {isLoadingFromApi ? (
@@ -139,10 +733,21 @@ export default function DiscoveryPage() {
                 results {filters.country ? ` in ${filters.country}` : " worldwide"}
               </span>
             </div>
-            <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
-              <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
-              <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
-              <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs border-border bg-card shadow-subtle hover:bg-muted text-muted-foreground hover:text-foreground"
+                onClick={() => setIsFilterOpen(true)}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search Clients & Filters
+              </Button>
+              <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
+                <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
+                <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
+                <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
+              </div>
             </div>
           </div>
 

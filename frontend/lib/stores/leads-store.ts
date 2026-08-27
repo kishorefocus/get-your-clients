@@ -59,6 +59,7 @@ function clientToLead(c: ClientResponse): Lead {
     priority: "medium",
     tags: c.tags ? c.tags.map((t) => t.name) : [],
     industryId: c.industry_id ?? undefined,
+    isLocked: c.is_locked ?? false,
   };
 }
 

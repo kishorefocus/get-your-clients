@@ -19,9 +19,19 @@ from fastapi import HTTPException, status
 router = APIRouter(prefix="/api/v1/clients", tags=["clients"])
 
 
-def _to_response(client, distance_meters: float | None = None) -> ClientResponse:
+def _to_response(
+    client, distance_meters: float | None = None, is_locked: bool = False
+) -> ClientResponse:
     resp = ClientResponse.model_validate(client)
     resp.distance_meters = distance_meters
+    resp.is_locked = is_locked
+    if is_locked:
+        resp.phone = "Locked (Pro Feature)"
+        resp.email = "Locked (Pro Feature)"
+        resp.website = "Locked (Pro Feature)"
+        resp.address = f"Locked Street, {client.city or ''}, {client.country or ''}".strip(", ")
+        resp.latitude = None
+        resp.longitude = None
     return resp
 
 
@@ -34,8 +44,30 @@ async def search_clients(
     clients, distances, next_cursor = await service.search(
         db, org_id=current_user.org_id, user_id=current_user.user_id, query=query
     )
+
+    from app.models.organization import Organization
+    from app.models.pipeline import ClientPipelineState
+    from sqlalchemy import select
+
+    org = await db.get(Organization, current_user.org_id)
+    is_free = (org.plan == "free") if org else True
+
+    # Query all pipeline states for this org to check claimed clients
+    claimed_stmt = select(ClientPipelineState.client_id).where(
+        ClientPipelineState.org_id == current_user.org_id
+    )
+    claimed_ids_res = await db.scalars(claimed_stmt)
+    claimed_ids = set(claimed_ids_res.all())
+
+    results = []
+    for idx, (c, d) in enumerate(zip(clients, distances)):
+        is_global = c.org_id != current_user.org_id
+        is_claimed = c.id in claimed_ids
+        c_locked = is_free and is_global and not is_claimed and idx >= 3
+        results.append(_to_response(c, d, is_locked=c_locked))
+
     return ClientSearchResponse(
-        results=[_to_response(c, d) for c, d in zip(clients, distances)],
+        results=results,
         next_cursor=next_cursor,
     )
 
@@ -47,7 +79,28 @@ async def get_client(
     db: AsyncSession = Depends(get_db),
 ):
     client = await service.get_client(db, org_id=current_user.org_id, user_id=current_user.user_id, client_id=client_id)
-    return _to_response(client)
+
+    from app.models.organization import Organization
+    from app.models.pipeline import ClientPipelineState
+    from sqlalchemy import select
+
+    org = await db.get(Organization, current_user.org_id)
+    is_free = (org.plan == "free") if org else True
+
+    is_global = client.org_id != current_user.org_id
+
+    # Check if claimed in pipeline
+    claimed = False
+    if is_global:
+        claimed_stmt = select(ClientPipelineState).where(
+            ClientPipelineState.org_id == current_user.org_id,
+            ClientPipelineState.client_id == client.id
+        )
+        res = await db.scalar(claimed_stmt)
+        claimed = res is not None
+
+    c_locked = is_free and is_global and not claimed
+    return _to_response(client, is_locked=c_locked)
 
 
 @router.post("", response_model=ClientResponse, status_code=201)

@@ -11,6 +11,7 @@ from app.modules.chat.router import router as chat_router
 from app.modules.clients.router import router as clients_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.pipeline.router import router as pipeline_router
+from app.modules.subscriptions.router import router as subscriptions_router
 
 # Gap-fill routers (previously models-only, now fully wired)
 from app.modules.contacts.router import router as contacts_router
@@ -67,6 +68,7 @@ app.include_router(orgs_router)
 app.include_router(clients_router)
 app.include_router(pipeline_router)
 app.include_router(chat_router)
+app.include_router(subscriptions_router)
 
 # Gap-fill routers
 app.include_router(contacts_router)

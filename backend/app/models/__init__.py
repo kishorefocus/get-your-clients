@@ -9,6 +9,7 @@ from app.models.organization import Organization
 from app.models.pipeline import PipelineStage
 from app.models.reminder import Reminder
 from app.models.saved_search import SavedSearch
+from app.models.subscription import Subscription
 from app.models.tag import Tag, client_tags
 from app.models.user import User
 
@@ -28,4 +29,5 @@ __all__ = [
     "SavedSearch",
     "Reminder",
     "AuditLog",
+    "Subscription",
 ]

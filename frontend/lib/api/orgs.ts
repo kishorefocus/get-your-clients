@@ -3,6 +3,7 @@ import { apiFetch } from "./client";
 export interface OrganizationResponse {
   id: string;
   name: string;
+  plan: string;
   country: string | null;
   created_at: string;
 }

@@ -33,10 +33,14 @@ export function FilterSidebar({
   filters,
   onChange,
   resultCount,
+  isOpen,
+  onClose,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   resultCount: number;
+  isOpen: boolean;
+  onClose: () => void;
 }) {
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value });
 
@@ -145,196 +149,229 @@ export function FilterSidebar({
   };
 
   return (
-    <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-background lg:flex">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="flex items-center gap-2 text-sm font-semibold">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" /> Filters
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={() =>
-            onChange({
-              keyword: "",
-              industry: null,
-              industryId: null,
-              country: "",
-              city: "",
-              limit: 10,
-              hasPhone: false,
-              hasEmail: false,
-              minRating: 0,
-              radiusKm: 50,
-            })
-          }
-        >
-          <X className="h-3 w-3" /> Clear
-        </Button>
-      </div>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+          />
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-4 scrollbar-thin">
-        {/* Saved Searches */}
-        <div className="border-b border-border pb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Bookmark className="h-3.5 w-3.5 text-primary" /> Saved Searches
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-1.5 text-[10px] gap-1 hover:text-primary"
-              onClick={() => setShowSaveInput(!showSaveInput)}
-            >
-              <Save className="h-3 w-3" /> Save current
-            </Button>
-          </div>
-          {showSaveInput && (
-            <form onSubmit={handleSaveSearch} className="flex gap-1.5 mb-3">
-              <Input
-                placeholder="Name this search..."
-                value={searchSaveName}
-                onChange={(e) => setSearchSaveName(e.target.value)}
-                className="h-7 text-xs bg-background/50"
-                required
-              />
-              <Button type="submit" size="sm" className="h-7 px-2 text-xs">
-                Save
-              </Button>
-            </form>
-          )}
-          <div className="space-y-1 max-h-32 overflow-y-auto scrollbar-thin">
-            {savedSearches.map((s) => (
-              <div
-                key={s.id}
-                onClick={() => handleApplySavedSearch(s)}
-                className="flex items-center justify-between py-1 px-2 text-xs rounded-md cursor-pointer hover:bg-muted group/saved"
-              >
-                <span className="truncate text-muted-foreground group-hover/saved:text-foreground">
-                  {s.name}
-                </span>
-                <button
-                  onClick={(e) => handleDeleteSavedSearch(s.id, e)}
-                  className="opacity-0 group-hover/saved:opacity-100 p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-danger"
+          {/* Sidebar Drawer */}
+          <motion.aside
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed inset-y-0 left-0 z-50 flex w-80 flex-col border-r border-border bg-background/95 backdrop-blur-md shadow-2xl h-full"
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" /> Filters
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    onChange({
+                      keyword: "",
+                      industry: null,
+                      industryId: null,
+                      country: "",
+                      city: "",
+                      limit: 10,
+                      hasPhone: false,
+                      hasEmail: false,
+                      minRating: 0,
+                      radiusKm: 50,
+                    })
+                  }
                 >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                  Clear
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground flex items-center justify-center"
+                  onClick={onClose}
+                  title="Close Filters"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            ))}
-            {savedSearches.length === 0 && (
-              <p className="text-[11px] text-muted-foreground italic text-center py-1">
-                No saved searches yet.
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto p-4 scrollbar-thin">
+              {/* Saved Searches */}
+              <div className="border-b border-border pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5 text-primary" /> Saved Searches
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1.5 text-[10px] gap-1 hover:text-primary"
+                    onClick={() => setShowSaveInput(!showSaveInput)}
+                  >
+                    <Save className="h-3 w-3" /> Save current
+                  </Button>
+                </div>
+                {showSaveInput && (
+                  <form onSubmit={handleSaveSearch} className="flex gap-1.5 mb-3">
+                    <Input
+                      placeholder="Name this search..."
+                      value={searchSaveName}
+                      onChange={(e) => setSearchSaveName(e.target.value)}
+                      className="h-7 text-xs bg-background/50"
+                      required
+                    />
+                    <Button type="submit" size="sm" className="h-7 px-2 text-xs">
+                      Save
+                    </Button>
+                  </form>
+                )}
+                <div className="space-y-1 max-h-32 overflow-y-auto scrollbar-thin">
+                  {savedSearches.map((s) => (
+                    <div
+                      key={s.id}
+                      onClick={() => handleApplySavedSearch(s)}
+                      className="flex items-center justify-between py-1 px-2 text-xs rounded-md cursor-pointer hover:bg-muted group/saved"
+                    >
+                      <span className="truncate text-muted-foreground group-hover/saved:text-foreground">
+                        {s.name}
+                      </span>
+                      <button
+                        onClick={(e) => handleDeleteSavedSearch(s.id, e)}
+                        className="opacity-0 group-hover/saved:opacity-100 p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-danger"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {savedSearches.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground italic text-center py-1">
+                      No saved searches yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Keyword Search */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Keyword</label>
+                <Input
+                  placeholder="e.g. textile, robotics…"
+                  value={filters.keyword}
+                  onChange={(e) => set("keyword", e.target.value)}
+                  className="focus-visible:ring-primary/20"
+                />
+              </div>
+
+              {/* Hierarchical Industry Picker */}
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Industry Taxonomy</p>
+                <div className="border border-border rounded-md p-2 bg-muted/20 max-h-56 overflow-y-auto space-y-1 scrollbar-thin">
+                  {industryTree.map((node) => renderIndustryNode(node))}
+                  {industryTree.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground italic text-center py-4">
+                      No industries returned from API.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Place or City Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Place, City or District</label>
+                <Input
+                  placeholder="e.g. kerala, palakkad district, Austin…"
+                  value={filters.city}
+                  onChange={(e) => set("city", e.target.value)}
+                  className="focus-visible:ring-primary/20"
+                />
+              </div>
+
+              {/* Country Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Country</label>
+                <Input
+                  placeholder="e.g. US, India, France…"
+                  value={filters.country}
+                  onChange={(e) => set("country", e.target.value)}
+                  className="focus-visible:ring-primary/20"
+                />
+              </div>
+
+              {/* Result Count Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Result Count</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  placeholder="e.g. 10"
+                  value={filters.limit}
+                  onChange={(e) => set("limit", Number(e.target.value))}
+                  className="focus-visible:ring-primary/20"
+                />
+              </div>
+
+              {/* Radius Search */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span>Search radius</span>
+                  <span className="font-mono text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">{filters.radiusKm} km</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={200}
+                  value={filters.radiusKm}
+                  onChange={(e) => set("radiusKm", Number(e.target.value))}
+                  className="w-full accent-primary cursor-pointer"
+                />
+              </div>
+
+              {/* Min Rating Slider */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span>Minimum rating</span>
+                  <span className="font-mono text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">{filters.minRating.toFixed(1)}+</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  value={filters.minRating}
+                  onChange={(e) => set("minRating", Number(e.target.value))}
+                  className="w-full accent-primary cursor-pointer"
+                />
+              </div>
+
+              {/* Compliances */}
+              <div className="space-y-2.5 pt-2 border-t border-border/50">
+                <Toggle label="Has phone number" checked={filters.hasPhone} onChange={(v) => set("hasPhone", v)} />
+                <Toggle label="Has email" checked={filters.hasEmail} onChange={(v) => set("hasEmail", v)} />
+              </div>
+            </div>
+
+            <div className="border-t border-border p-4 bg-muted/20">
+              <p className="text-center text-xs text-muted-foreground">
+                <span className="font-mono font-medium text-foreground bg-muted px-1.5 py-0.5 rounded mr-1">{resultCount}</span> businesses match
               </p>
-            )}
-          </div>
-        </div>
-
-        {/* Keyword Search */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Keyword</label>
-          <Input
-            placeholder="e.g. textile, robotics…"
-            value={filters.keyword}
-            onChange={(e) => set("keyword", e.target.value)}
-            className="focus-visible:ring-primary/20"
-          />
-        </div>
-
-        {/* Hierarchical Industry Picker */}
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Industry Taxonomy</p>
-          <div className="border border-border rounded-md p-2 bg-muted/20 max-h-56 overflow-y-auto space-y-1 scrollbar-thin">
-            {industryTree.map((node) => renderIndustryNode(node))}
-            {industryTree.length === 0 && (
-              <p className="text-[11px] text-muted-foreground italic text-center py-4">
-                No industries returned from API.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Place or City Input */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Place, City or District</label>
-          <Input
-            placeholder="e.g. kerala, palakkad district, Austin…"
-            value={filters.city}
-            onChange={(e) => set("city", e.target.value)}
-            className="focus-visible:ring-primary/20"
-          />
-        </div>
-
-        {/* Country Input */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Country</label>
-          <Input
-            placeholder="e.g. US, India, France…"
-            value={filters.country}
-            onChange={(e) => set("country", e.target.value)}
-            className="focus-visible:ring-primary/20"
-          />
-        </div>
-
-        {/* Result Count Input */}
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Result Count</label>
-          <Input
-            type="number"
-            min={1}
-            max={100}
-            placeholder="e.g. 10"
-            value={filters.limit}
-            onChange={(e) => set("limit", Number(e.target.value))}
-            className="focus-visible:ring-primary/20"
-          />
-        </div>
-
-        {/* Radius Search */}
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Search radius</span>
-            <span className="font-mono text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">{filters.radiusKm} km</span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={200}
-            value={filters.radiusKm}
-            onChange={(e) => set("radiusKm", Number(e.target.value))}
-            className="w-full accent-primary cursor-pointer"
-          />
-        </div>
-
-        {/* Min Rating Slider */}
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Minimum rating</span>
-            <span className="font-mono text-xs text-foreground bg-muted px-1.5 py-0.5 rounded">{filters.minRating.toFixed(1)}+</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={5}
-            step={0.5}
-            value={filters.minRating}
-            onChange={(e) => set("minRating", Number(e.target.value))}
-            className="w-full accent-primary cursor-pointer"
-          />
-        </div>
-
-        {/* Compliances */}
-        <div className="space-y-2.5 pt-2 border-t border-border/50">
-          <Toggle label="Has phone number" checked={filters.hasPhone} onChange={(v) => set("hasPhone", v)} />
-          <Toggle label="Has email" checked={filters.hasEmail} onChange={(v) => set("hasEmail", v)} />
-        </div>
-      </div>
-
-      <div className="border-t border-border p-4 bg-muted/20">
-        <p className="text-center text-xs text-muted-foreground">
-          <span className="font-mono font-medium text-foreground bg-muted px-1.5 py-0.5 rounded mr-1">{resultCount}</span> businesses match
-        </p>
-      </div>
-    </aside>
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 

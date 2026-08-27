@@ -8,6 +8,7 @@ from app.models.base import TimestampMixin, UUIDPKMixin
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.subscription import Subscription
 
 
 class Organization(UUIDPKMixin, TimestampMixin, Base):
@@ -20,3 +21,6 @@ class Organization(UUIDPKMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     users: Mapped[list["User"]] = relationship(back_populates="organization")  # noqa: F821
+    subscription: Mapped["Subscription | None"] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
+    )

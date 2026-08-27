@@ -19,6 +19,7 @@ export interface ClientResponse {
   consent_status: string;
   distance_meters: number | null;
   tags?: { id: string; name: string }[];
+  is_locked?: boolean;
 }
 
 export interface ClientSearchRequest {
