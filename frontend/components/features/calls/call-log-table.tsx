@@ -27,11 +27,13 @@ const outcomeVariantMap: Record<CallLog["outcome"], "default" | "success" | "dan
 };
 
 interface Props {
+  calls?: CallLog[];
   onStartCall: (log: CallLog) => void;
 }
 
-export function CallLogTable({ onStartCall }: Props) {
+export function CallLogTable({ calls, onStartCall }: Props) {
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
+  const displayCalls = calls || mockCallLogs;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-subtle">
@@ -40,7 +42,7 @@ export function CallLogTable({ onStartCall }: Props) {
           Recent Calls
         </span>
         <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-          {mockCallLogs.length}
+          {displayCalls.length}
         </span>
       </div>
       <motion.div
@@ -49,7 +51,7 @@ export function CallLogTable({ onStartCall }: Props) {
         animate="visible"
         className="divide-y divide-border"
       >
-        {mockCallLogs.map((log) => (
+        {displayCalls.map((log) => (
           <motion.div
             key={log.id}
             variants={staggerChild}

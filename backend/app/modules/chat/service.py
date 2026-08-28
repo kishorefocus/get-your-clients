@@ -1,8 +1,9 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.client import Client
 from app.models.interaction import InteractionType
 from app.models.message import Message, MessageStatus, MessageThread
 
@@ -58,3 +59,48 @@ async def mark_read(db: AsyncSession, *, message_id: uuid.UUID) -> None:
     if message is not None:
         message.status = MessageStatus.READ.value
         await db.commit()
+
+
+async def list_threads(db: AsyncSession, *, org_id: uuid.UUID) -> list[dict]:
+    stmt = (
+        select(MessageThread, Client.name, Client.country)
+        .join(Client, MessageThread.client_id == Client.id)
+        .where(MessageThread.org_id == org_id, MessageThread.is_archived == False)
+    )
+    res = await db.execute(stmt)
+    
+    threads_data = []
+    for row in res.all():
+        thread, client_name, client_country = row
+        
+        # Last message
+        last_msg_stmt = (
+            select(Message)
+            .where(Message.thread_id == thread.id)
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        last_msg = await db.scalar(last_msg_stmt)
+        
+        # Unread count
+        unread_stmt = select(func.count(Message.id)).where(
+            Message.thread_id == thread.id,
+            Message.sender_user_id.is_(None),
+            Message.status != "read"
+        )
+        unread_count = (await db.execute(unread_stmt)).scalar() or 0
+        
+        threads_data.append({
+            "id": str(thread.id),
+            "leadId": str(thread.client_id),
+            "leadName": client_name or "Unknown Client",
+            "leadCountry": client_country or "—",
+            "lastMessage": last_msg.body if last_msg else "",
+            "lastMessageTime": last_msg.created_at.isoformat() if last_msg else thread.created_at.isoformat(),
+            "unreadCount": unread_count,
+            "messages": []
+        })
+        
+    threads_data.sort(key=lambda x: x["lastMessageTime"], reverse=True)
+    return threads_data
+

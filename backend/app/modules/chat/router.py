@@ -16,6 +16,14 @@ from app.schemas.chat import MessageResponse, WebSocketEvent
 router = APIRouter(tags=["chat"])
 
 
+@router.get("/api/v1/chat/threads")
+async def list_threads(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.list_threads(db, org_id=current_user.org_id)
+
+
 @router.post("/api/v1/chat/threads/by-client/{client_id}")
 async def get_or_create_thread_for_client(
     client_id: uuid.UUID,

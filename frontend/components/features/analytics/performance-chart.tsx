@@ -1,6 +1,7 @@
 "use client";
 
 import { weeklyPerformance } from "@/lib/mock/analytics";
+import { AnalyticsSeries } from "@/types";
 import {
   AreaChart,
   Area,
@@ -12,13 +13,15 @@ import {
   Legend,
 } from "recharts";
 
-export function PerformanceChart() {
+export function PerformanceChart({ data }: { data?: AnalyticsSeries[] }) {
+  const chartData = data || weeklyPerformance;
+
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-subtle">
       <h3 className="font-display text-sm font-semibold mb-1">Outreach Performance</h3>
       <p className="text-[11px] text-muted-foreground mb-4">Outreach sent vs. responses — last 12 weeks</p>
       <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={weeklyPerformance} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+        <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="gradOut" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="hsl(228 100% 57%)" stopOpacity={0.3} />

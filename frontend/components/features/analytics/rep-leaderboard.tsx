@@ -6,11 +6,13 @@ import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { staggerContainerFast, staggerChild, scaleInSpring } from "@/lib/motion";
+import { RepStat } from "@/types";
 
 const medals = ["🥇", "🥈", "🥉"];
 
-export function RepLeaderboard() {
-  const sorted = [...repStats].sort((a, b) => b.dealsWon - a.dealsWon);
+export function RepLeaderboard({ data }: { data?: RepStat[] }) {
+  const repsToUse = data || repStats;
+  const sorted = [...repsToUse].sort((a, b) => b.dealsWon - a.dealsWon);
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-subtle overflow-hidden">

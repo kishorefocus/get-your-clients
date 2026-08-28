@@ -24,6 +24,20 @@ class MoveClientStageRequest(BaseModel):
     assigned_user_id: uuid.UUID | None = None
 
 
+class KanbanClientItem(BaseModel):
+    id: uuid.UUID
+    name: str
+    city: str | None = None
+    country: str | None = None
+    rating: float | None = None
+    category: str | None = None
+    priority: str = "medium"
+    nextFollowUp: str | None = None
+    assignedRep: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class KanbanColumnResponse(BaseModel):
     stage: PipelineStageResponse
-    client_ids: list[uuid.UUID]
+    clients: list[KanbanClientItem]

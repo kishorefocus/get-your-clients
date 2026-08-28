@@ -27,12 +27,13 @@ function SuccessPageContent() {
       setErrorMessage("Missing Stripe checkout session ID.");
       return;
     }
+    const activeSessionId = sessionId as string;
 
     let isMounted = true;
 
     async function verify() {
       try {
-        await confirmPayment(sessionId);
+        await confirmPayment(activeSessionId);
         
         if (isMounted) {
           setStatus("success");

@@ -10,6 +10,7 @@ from app.core.security import (
 )
 from app.models.organization import Organization
 from app.models.user import User, UserRole
+from app.models.pipeline import PipelineStage
 from app.schemas.auth import LoginRequest, RegisterOrgRequest, TokenPairResponse
 
 
@@ -30,6 +31,20 @@ async def register_org(db: AsyncSession, payload: RegisterOrgRequest) -> TokenPa
         role=UserRole.ADMIN.value,  # first user of a new org is always admin
     )
     db.add(user)
+
+    # Seed default pipeline stages
+    stage_definitions = [
+        ("New", 0, False),
+        ("Contacted", 1, False),
+        ("Responded", 2, False),
+        ("Negotiating", 3, False),
+        ("Won", 4, True),
+        ("Lost", 5, True),
+    ]
+    for name, pos, is_term in stage_definitions:
+        stage = PipelineStage(org_id=org.id, name=name, position=pos, is_terminal=is_term)
+        db.add(stage)
+
     await db.commit()
 
     return TokenPairResponse(

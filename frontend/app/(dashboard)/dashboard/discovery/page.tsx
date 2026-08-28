@@ -25,7 +25,7 @@ export interface BusinessTemplate {
   searchKeywords: string[];
 }
 
-export const BUSINESS_TEMPLATES = [
+const BUSINESS_TEMPLATES = [
   // Tech & Digital Agencies
   {
     category: "App & Web Development Company",
@@ -182,7 +182,7 @@ export const BUSINESS_TEMPLATES = [
   }
 ];
 
-export const BUSINESS_GROUPS = {
+const BUSINESS_GROUPS = {
   "Tech & Digital": BUSINESS_TEMPLATES.slice(0, 10),
   "Services": BUSINESS_TEMPLATES.slice(10, 17),
   "Food & Retail": BUSINESS_TEMPLATES.slice(17, 24),

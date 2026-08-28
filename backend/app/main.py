@@ -21,6 +21,8 @@ from app.modules.saved_searches.router import router as saved_searches_router
 from app.modules.reminders.router import router as reminders_router
 from app.modules.interactions.router import router as interactions_router
 from app.modules.audit_logs.router import router as audit_logs_router
+from app.modules.dashboard.router import router as dashboard_router
+from app.modules.calls.router import router as calls_router
 
 
 @asynccontextmanager
@@ -69,6 +71,8 @@ app.include_router(clients_router)
 app.include_router(pipeline_router)
 app.include_router(chat_router)
 app.include_router(subscriptions_router)
+app.include_router(dashboard_router)
+app.include_router(calls_router)
 
 # Gap-fill routers
 app.include_router(contacts_router)

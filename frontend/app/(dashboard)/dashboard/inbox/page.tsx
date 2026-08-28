@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Topbar } from "@/components/features/layout/topbar";
 import { ConversationList } from "@/components/features/chat/conversation-list";
 import { MessageThread } from "@/components/features/chat/message-thread";
@@ -63,7 +64,11 @@ function ActiveChatConnector({ conversationId }: { conversationId: string }) {
 }
 
 export default function InboxPage() {
-  const { activeConversationId } = useChatStore();
+  const { activeConversationId, fetchConversations } = useChatStore();
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

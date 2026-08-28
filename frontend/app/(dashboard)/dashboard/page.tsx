@@ -32,6 +32,7 @@ import {
   useUpdateReminder,
   useDeleteReminder,
 } from "@/lib/hooks/use-reminders";
+import { useDashboardOverview } from "@/lib/hooks/use-dashboard";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { toast } from "sonner";
 
@@ -116,7 +117,15 @@ const mockNewEvents = [
   { id: "live-2", name: "Bergen Maritime Co.", city: "Bergen", country: "Norway", category: "Shipping", lat: 60.39, lng: 5.32, countryCode: "NO", stage: "contacted" as const },
 ];
 
+const kpiIcons: Record<string, any> = {
+  "Leads found": Users,
+  "Outreach sent": Send,
+  "Response rate": MessageSquare,
+  "Deals in pipeline": DollarSign,
+};
+
 export default function DashboardOverviewPage() {
+  const { data: overviewData } = useDashboardOverview();
   const [activity, setActivity] = useState(initialActivity);
   const [newId, setNewId] = useState<string | null>(null);
   const eventIndex = useRef(0);
@@ -138,6 +147,21 @@ export default function DashboardOverviewPage() {
     due_at: "",
     client_id: "",
   });
+
+  // Calculate dynamic values
+  const kpisToRender = (overviewData?.kpis || kpis).map((k) => ({
+    ...k,
+    icon: kpiIcons[k.label] || Users,
+  }));
+
+  const activityToRender = overviewData?.activity || activity;
+
+  const topCountriesToRender = overviewData?.top_countries || [
+    { country: "Turkey", pct: 38 },
+    { country: "Sweden", pct: 31 },
+    { country: "Japan", pct: 24 },
+    { country: "Netherlands", pct: 17 },
+  ];
 
   // Simulate a new activity item arriving every 12 seconds
   useEffect(() => {
@@ -197,7 +221,7 @@ export default function DashboardOverviewPage() {
           initial="hidden"
           animate="visible"
         >
-          {kpis.map((k) => (
+          {kpisToRender.map((k) => (
             <KpiCard key={k.label} kpi={k} />
           ))}
         </motion.div>
@@ -224,9 +248,9 @@ export default function DashboardOverviewPage() {
               </CardHeader>
               <CardContent className="space-y-2 pb-5">
                 <AnimatePresence initial={false}>
-                  {activity.map((lead) => (
+                  {activityToRender.map((lead) => (
                     <motion.div
-                      key={lead.id}
+                       key={lead.id}
                       layout
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -238,13 +262,13 @@ export default function DashboardOverviewPage() {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{lead.name}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
                           {lead.city}, {lead.country} · {lead.category}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-3">
                         <span className="manifest-chip hidden sm:flex">
-                          {formatCoords(lead.lat, lead.lng)} · {lead.countryCode}
+                          {lead.lat && lead.lng ? formatCoords(lead.lat, lead.lng) : "—"} · {lead.countryCode}
                         </span>
                         <Badge
                           variant={
@@ -272,12 +296,7 @@ export default function DashboardOverviewPage() {
                 <CardTitle>Top countries this week</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pb-5">
-                {[
-                  { country: "Turkey", pct: 38 },
-                  { country: "Sweden", pct: 31 },
-                  { country: "Japan", pct: 24 },
-                  { country: "Netherlands", pct: 17 },
-                ].map(({ country, pct }, i) => (
+                {topCountriesToRender.map(({ country, pct }, i) => (
                   <motion.div
                     key={country}
                     className="space-y-1"

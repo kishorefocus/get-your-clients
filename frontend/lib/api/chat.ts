@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { Conversation } from "@/types";
 
 export interface MessageResponse {
   id: string;
@@ -24,4 +25,8 @@ export async function getMessageHistory(
   return apiFetch<MessageResponse[]>(
     `/api/v1/chat/threads/${threadId}/messages`
   );
+}
+
+export async function listConversations(): Promise<Conversation[]> {
+  return apiFetch<Conversation[]>("/api/v1/chat/threads");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { countryMetrics } from "@/lib/mock/analytics";
+import { CountryMetric } from "@/types";
 import {
   BarChart,
   Bar,
@@ -12,14 +13,16 @@ import {
   Legend,
 } from "recharts";
 
-export function CountryBreakdown() {
+export function CountryBreakdown({ data }: { data?: CountryMetric[] }) {
+  const chartData = data || countryMetrics;
+
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-subtle">
       <h3 className="font-display text-sm font-semibold mb-1">Leads by Country</h3>
       <p className="text-[11px] text-muted-foreground mb-4">Top 8 countries — leads discovered vs. deals won</p>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart
-          data={countryMetrics}
+          data={chartData}
           layout="vertical"
           margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
           barCategoryGap="25%"

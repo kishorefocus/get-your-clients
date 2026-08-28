@@ -12,6 +12,7 @@ import { Download, TrendingUp, Percent, Globe2, PhoneCall } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerChild, cardHoverProps } from "@/lib/motion";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { useDashboardAnalytics } from "@/lib/hooks/use-dashboard";
 
 const kpis = [
   { label: "Total leads discovered", rawValue: 2481, display: "2,481", delta: "+12.4%", icon: Globe2 },
@@ -20,8 +21,16 @@ const kpis = [
   { label: "Total calls made", rawValue: 315, display: "315", delta: "+22%", icon: PhoneCall },
 ];
 
-function AnalyticsKpiCard({ kpi }: { kpi: typeof kpis[0] }) {
+const kpiIcons: Record<string, any> = {
+  "Total leads discovered": Globe2,
+  "Conversion rate": TrendingUp,
+  "Avg. response rate": Percent,
+  "Total calls made": PhoneCall,
+};
+
+function AnalyticsKpiCard({ kpi }: { kpi: any }) {
   const { value, ref } = useCountUp<HTMLParagraphElement>(kpi.rawValue, 900);
+  const Icon = kpi.icon || Globe2;
 
   const formattedValue = kpi.display.endsWith("%")
     ? `${(value / 10).toFixed(1)}%`
@@ -39,7 +48,7 @@ function AnalyticsKpiCard({ kpi }: { kpi: typeof kpis[0] }) {
             <p className="mt-0.5 text-[10px] font-medium text-success">{kpi.delta} this month</p>
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <kpi.icon className="h-4 w-4" />
+            <Icon className="h-4 w-4" />
           </div>
         </CardContent>
       </Card>
@@ -48,6 +57,14 @@ function AnalyticsKpiCard({ kpi }: { kpi: typeof kpis[0] }) {
 }
 
 export default function AnalyticsPage() {
+  const { data: analyticsData, isLoading } = useDashboardAnalytics();
+
+  const activeKpis = analyticsData?.kpis || kpis;
+  const kpisToRender = activeKpis.map((k) => ({
+    ...k,
+    icon: kpiIcons[k.label] || Globe2,
+  }));
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar
@@ -60,29 +77,35 @@ export default function AnalyticsPage() {
       />
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin space-y-5">
         {/* KPI row */}
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-        >
-          {kpis.map((k) => (
-            <AnalyticsKpiCard key={k.label} kpi={k} />
-          ))}
-        </motion.div>
+        {isLoading ? (
+          <div className="flex h-16 items-center justify-center">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          >
+            {kpisToRender.map((k) => (
+              <AnalyticsKpiCard key={k.label} kpi={k} />
+            ))}
+          </motion.div>
+        )}
 
         {/* Charts row 1 */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <PerformanceChart />
-          <FunnelChart />
+          <PerformanceChart data={analyticsData?.weeklyPerformance} />
+          <FunnelChart data={analyticsData?.funnelData} />
         </div>
 
         {/* Charts row 2 */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <CountryBreakdown />
+            <CountryBreakdown data={analyticsData?.countryMetrics} />
           </div>
-          <RepLeaderboard />
+          <RepLeaderboard data={analyticsData?.repStats} />
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { Conversation, Message } from "@/types";
 import { mockConversations } from "@/lib/mock/conversations";
-import { MessageResponse } from "@/lib/api/chat";
+import { MessageResponse, listConversations } from "@/lib/api/chat";
 
 interface ChatStore {
   conversations: Conversation[];
@@ -18,9 +18,11 @@ interface ChatStore {
   /** Called by useChatThread when a real WS message.new event arrives. */
   appendBackendMessage: (conversationId: string, msg: MessageResponse) => void;
   setThreadId: (conversationId: string, threadId: string) => void;
+  fetchConversations: () => Promise<void>;
+  setMessages: (conversationId: string, messages: Message[]) => void;
 }
 
-function backendMsgToFrontend(conversationId: string, msg: MessageResponse): Message {
+export function backendMsgToFrontend(conversationId: string, msg: MessageResponse): Message {
   return {
     id: msg.id,
     conversationId,
@@ -128,5 +130,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   totalUnread: () => {
     return get().conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  },
+
+  fetchConversations: async () => {
+    try {
+      const apiConversations = await listConversations();
+      if (apiConversations && apiConversations.length > 0) {
+        set({ conversations: apiConversations });
+      }
+    } catch (err) {
+      // Keep existing conversations
+    }
+  },
+
+  setMessages: (conversationId, messages) => {
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId ? { ...c, messages } : c
+      ),
+    }));
   },
 }));

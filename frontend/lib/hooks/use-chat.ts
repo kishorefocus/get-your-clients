@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getOrCreateThread, getMessageHistory, MessageResponse } from "@/lib/api/chat";
 import { buildWsUrl } from "@/lib/api/client";
-import { useChatStore } from "@/lib/stores/chat-store";
+import { useChatStore, backendMsgToFrontend } from "@/lib/stores/chat-store";
 import { toast } from "sonner";
 
 export const CHAT_KEYS = {
@@ -33,19 +33,31 @@ export function useChatThread(conversationId: string | null) {
 
   useEffect(() => {
     if (!conversationId) return;
+    const activeConversationId = conversationId as string;
 
     let cancelled = false;
 
     async function connect() {
       // Find the lead/client id from the conversation
       const store = useChatStore.getState();
-      const conv = store.conversations.find((c) => c.id === conversationId);
+      const conv = store.conversations.find((c) => c.id === activeConversationId);
       if (!conv) return;
 
       try {
         const { thread_id } = await getOrCreateThread(conv.leadId);
         if (cancelled) return;
         threadIdRef.current = thread_id;
+        store.setThreadId(activeConversationId, thread_id);
+
+        try {
+          const history = await getMessageHistory(thread_id);
+          if (!cancelled) {
+            const mapped = history.map((msg) => backendMsgToFrontend(activeConversationId, msg));
+            store.setMessages(activeConversationId, mapped);
+          }
+        } catch {
+          // ignore and keep mock messages
+        }
 
         const url = buildWsUrl(`/ws/chat/${thread_id}`);
         const ws = new WebSocket(url);
@@ -55,7 +67,7 @@ export function useChatThread(conversationId: string | null) {
           try {
             const frame = JSON.parse(event.data);
             if (frame.event === "message.new") {
-              appendMessage(conversationId!, frame.data as MessageResponse);
+              appendMessage(activeConversationId, frame.data as MessageResponse);
             }
           } catch {
             // ignore malformed frames
