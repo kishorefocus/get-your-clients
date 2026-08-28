@@ -22,7 +22,7 @@ export function useSubscriptionStatus() {
 export function useSubscribe() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (plan: string) => subscribeToPlan(plan),
+    mutationFn: ({ plan, interval }: { plan: string; interval: "month" | "year" }) => subscribeToPlan(plan, interval),
     onSuccess: (newSub) => {
       qc.invalidateQueries({ queryKey: SUB_KEYS.status });
       qc.invalidateQueries({ queryKey: ORG_KEYS.me });

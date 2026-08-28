@@ -90,8 +90,16 @@ async def subscribe(
         await db.refresh(sub)
         return sub
 
-    # For paid plans (pro, enterprise), create a Stripe Checkout Session
+    # For paid plans (growth, pro, enterprise), create a Stripe Checkout Session
     stripe.api_key = settings.stripe_secret_key
+    
+    plan_prices = {
+        "growth": {"month": 1900, "year": 1500 * 12},
+        "pro": {"month": 4900, "year": 3900 * 12},
+        "enterprise": {"month": 14900, "year": 11900 * 12},
+    }
+    
+    unit_amount = plan_prices.get(payload.plan, {}).get(payload.interval, 4900)
     
     checkout_kwargs = {
         "payment_method_types": ["card"],
@@ -99,12 +107,12 @@ async def subscribe(
             "price_data": {
                 "currency": "usd",
                 "product_data": {
-                    "name": f"GlobalReach {payload.plan.capitalize()} Plan",
+                    "name": f"GlobalReach {payload.plan.capitalize()} Plan ({payload.interval.capitalize()}ly)",
                     "description": f"Access to GlobalReach {payload.plan.capitalize()} features",
                 },
-                "unit_amount": 4900 if payload.plan == "pro" else 14900,
+                "unit_amount": unit_amount,
                 "recurring": {
-                    "interval": "month",
+                    "interval": payload.interval,
                 },
             },
             "quantity": 1,
@@ -293,6 +301,7 @@ async def fulfill_checkout_session(session: dict, db: AsyncSession):
     stripe_cust_id = session.get("customer")
 
     current_period_end = None
+    billing_interval = "month"
     if stripe_sub_id:
         try:
             stripe.api_key = settings.stripe_secret_key
@@ -300,6 +309,10 @@ async def fulfill_checkout_session(session: dict, db: AsyncSession):
             current_period_end = datetime.fromtimestamp(
                 stripe_sub.current_period_end, tz=timezone.utc
             )
+            try:
+                billing_interval = stripe_sub["items"]["data"][0]["price"]["recurring"]["interval"]
+            except Exception:
+                pass
         except Exception:
             current_period_end = datetime.now(timezone.utc) + timedelta(days=30)
 
@@ -311,6 +324,7 @@ async def fulfill_checkout_session(session: dict, db: AsyncSession):
             current_period_end=current_period_end,
             stripe_subscription_id=stripe_sub_id,
             stripe_customer_id=stripe_cust_id,
+            billing_interval=billing_interval,
         )
         db.add(sub)
     else:
@@ -318,6 +332,7 @@ async def fulfill_checkout_session(session: dict, db: AsyncSession):
         sub.status = "active"
         sub.current_period_end = current_period_end
         sub.stripe_subscription_id = stripe_sub_id
+        sub.billing_interval = billing_interval
         if stripe_cust_id:
             sub.stripe_customer_id = stripe_cust_id
         sub.updated_at = datetime.now(timezone.utc)
@@ -356,6 +371,7 @@ async def handle_subscription_deleted(stripe_sub: dict, db: AsyncSession):
     sub.status = "active"
     sub.current_period_end = None
     sub.stripe_subscription_id = None
+    sub.billing_interval = "month"
     sub.updated_at = datetime.now(timezone.utc)
 
     if org:

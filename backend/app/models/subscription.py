@@ -28,5 +28,6 @@ class Subscription(UUIDPKMixin, TimestampMixin, Base):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    billing_interval: Mapped[str] = mapped_column(String(20), default="month", nullable=False)
 
     organization: Mapped["Organization"] = relationship(back_populates="subscription")

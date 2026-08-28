@@ -7,6 +7,7 @@ export interface SubscriptionResponse {
   status: string;
   current_period_end: string | null;
   checkout_url?: string;
+  billing_interval?: string;
 }
 
 
@@ -14,10 +15,10 @@ export async function getSubscriptionStatus(): Promise<SubscriptionResponse> {
   return apiFetch<SubscriptionResponse>("/api/v1/subscriptions/status");
 }
 
-export async function subscribeToPlan(plan: string): Promise<SubscriptionResponse> {
+export async function subscribeToPlan(plan: string, interval: "month" | "year" = "month"): Promise<SubscriptionResponse> {
   return apiFetch<SubscriptionResponse>("/api/v1/subscriptions/subscribe", {
     method: "POST",
-    body: { plan },
+    body: { plan, interval },
   });
 }
 
