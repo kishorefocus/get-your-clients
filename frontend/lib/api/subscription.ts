@@ -6,7 +6,9 @@ export interface SubscriptionResponse {
   plan: string;
   status: string;
   current_period_end: string | null;
+  checkout_url?: string;
 }
+
 
 export async function getSubscriptionStatus(): Promise<SubscriptionResponse> {
   return apiFetch<SubscriptionResponse>("/api/v1/subscriptions/status");

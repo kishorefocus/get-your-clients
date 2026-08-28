@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { 
   List, Map as MapIcon, Columns2, 
   Sparkles, Brain, MapPin, Building, Search, 
-  Briefcase, CheckCircle2, RotateCcw, ChevronDown, ChevronUp 
+  Briefcase, CheckCircle2, RotateCcw, ChevronDown, ChevronUp, X 
 } from "lucide-react";
 import { Topbar } from "@/components/features/layout/topbar";
 import { Button } from "@/components/ui/button";
@@ -214,6 +214,8 @@ const defaultFilters: Filters = {
 export default function DiscoveryPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [view, setView] = useState<ViewMode>("list");
   const [activeId, setActiveId] = useState<string | null>(null);
   const leads = useLeadsStore((s) => s.leads);
@@ -418,340 +420,103 @@ export default function DiscoveryPage() {
 
         <div className="flex min-h-0 flex-1 flex-col bg-background/50">
           
-          {/* AI Client Discovery Engine Card */}
-          <div className="border-b border-border/80 bg-gradient-to-br from-card/85 via-card/75 to-surface/90 backdrop-blur-lg p-5 shadow-lg shadow-primary/5 transition-all duration-300 relative overflow-hidden">
-            {/* Glowing accent ambient lights */}
-            <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-primary/10 blur-[80px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-accent/15 blur-[60px] pointer-events-none" />
-            
-            <div className="max-w-7xl mx-auto relative z-10">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Brain className="h-4.5 w-4.5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
-                      AI Client Discovery Engine <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-mono">BETA</span>
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground">Select your business type and client location to identify target prospects.</p>
-                  </div>
+          {!hasSearched ? (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col items-center justify-center p-8 py-24 text-center max-w-2xl mx-auto flex-1 min-h-[60vh]"
+            >
+              {/* Visual Icon Area with Glowing Aura */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-125 animate-pulse" />
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent border border-primary-foreground/20 text-white shadow-xl shadow-primary/25">
+                  <Brain className="h-11 w-11 text-white animate-pulse" />
+                  <Sparkles className="absolute -top-1.5 -right-1.5 h-6 w-6 text-accent animate-bounce" />
                 </div>
-                <div className="flex items-center gap-2">
-                  {(yourBusinessName || clientLocation || aiReport) && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 hover:text-danger" onClick={handleResetAi}>
-                      <RotateCcw className="h-3 w-3" /> Clear
-                    </Button>
+              </div>
+
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground font-display sm:text-4xl mb-4">
+                Find Your Ideal Clients using AI
+              </h1>
+              
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-md mb-8">
+                Use our AI Persona Discovery engine to analyze your business model, scan local profiles, and map out your target market in seconds.
+              </p>
+
+              <div className="flex flex-col gap-4 items-center">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setIsWizardOpen(true)}
+                  className="h-14 px-10 rounded-full bg-gradient-to-r from-primary via-primary to-accent hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-primary/25 flex items-center gap-2.5 tracking-wider uppercase font-mono border border-primary-foreground/10"
+                >
+                  <Sparkles className="h-5 w-5 fill-white/20 text-white" />
+                  Start AI Persona Finder
+                </motion.button>
+                
+                <button
+                  onClick={() => {
+                    setHasSearched(true);
+                    setView("split");
+                  }}
+                  className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors hover:underline"
+                >
+                  Or browse database manually
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
+                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  {isLoadingFromApi ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={results.length}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 4 }}
+                        transition={{ duration: 0.15 }}
+                        className="font-mono text-foreground font-semibold"
+                      >
+                        {results.length}
+                      </motion.span>
+                    </AnimatePresence>
                   )}
+                  <span>
+                    results {filters.country ? ` in ${filters.country}` : " worldwide"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setIsWizardCollapsed(!isWizardCollapsed)}
-                    title={isWizardCollapsed ? "Expand Wizard" : "Collapse Wizard"}
+                    className="h-8 gap-1.5 text-xs border-border bg-card shadow-subtle hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => setIsFilterOpen(true)}
                   >
-                    {isWizardCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                    <Search className="h-3.5 w-3.5" />
+                    Filters
                   </Button>
-                </div>
-              </div>
-
-              <AnimatePresence initial={false}>
-                {!isWizardCollapsed && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="overflow-hidden space-y-4"
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white font-semibold shadow-subtle flex items-center animate-pulse"
+                    onClick={() => setIsWizardOpen(true)}
                   >
-                    {/* Tabs & Bubbles Grid */}
-                    <div className="space-y-2">
-                      <div className="flex border-b border-border/60 pb-1 gap-4 overflow-x-auto scrollbar-none">
-                        {Object.keys(BUSINESS_GROUPS).map((group) => (
-                          <button
-                            key={group}
-                            onClick={() => setActiveTab(group)}
-                            className={cn(
-                              "text-xs font-semibold pb-1 border-b-2 px-1 transition-colors whitespace-nowrap",
-                              activeTab === group
-                                ? "border-primary text-foreground"
-                                : "border-transparent text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {group}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-muted/20 rounded-md scrollbar-thin">
-                        {BUSINESS_GROUPS[activeTab as keyof typeof BUSINESS_GROUPS].map((t) => {
-                          const isSelected = selectedTemplate?.category === t.category;
-                          return (
-                            <button
-                              key={t.category}
-                              onClick={() => handleTemplateSelect(t)}
-                              className={cn(
-                                "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 focus-visible:outline-ring",
-                                isSelected
-                                  ? "border-primary bg-primary/10 text-primary shadow-subtle"
-                                  : "border-border/80 text-muted-foreground hover:bg-muted hover:text-foreground bg-card"
-                              )}
-                            >
-                              {t.category}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Inputs & AI Report Grid */}
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                      <div className="lg:col-span-2 space-y-3">
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                              <Building className="h-3 w-3" /> Your Business
-                            </label>
-                            <input
-                              type="text"
-                              value={yourBusinessName}
-                              onChange={(e) => {
-                                setYourBusinessName(e.target.value);
-                                setSelectedTemplate(null);
-                              }}
-                              placeholder="e.g. Apex AI Labs"
-                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                              <MapPin className="h-3 w-3" /> Your Location
-                            </label>
-                            <input
-                              type="text"
-                              value={yourLocation}
-                              onChange={(e) => setYourLocation(e.target.value)}
-                              placeholder="e.g. Palakkad, Kerala"
-                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                              <Search className="h-3 w-3" /> Target Client Location
-                            </label>
-                            <input
-                              type="text"
-                              value={clientLocation}
-                              onChange={(e) => setClientLocation(e.target.value)}
-                              placeholder="e.g. London, UK"
-                              className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <p className="text-[10px] text-muted-foreground italic">
-                            * AI searches local Google Places + maps profiles dynamically in your target area.
-                          </p>
-                          <Button
-                            size="sm"
-                            className="h-8 px-4 text-xs gap-1.5 bg-gradient-to-r from-primary to-accent hover:opacity-95 shadow-md shadow-primary/10"
-                            onClick={handleAiSearch}
-                            disabled={isAnalyzing}
-                          >
-                            {isAnalyzing ? (
-                              <>
-                                <span className="h-3 w-3 animate-spin rounded-full border border-background border-t-transparent" />
-                                Analyzing...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-3.5 w-3.5 text-primary-foreground fill-primary-foreground/25" />
-                                Identify Clients & Search
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* AI Report Card */}
-                      <div className="lg:col-span-1 rounded-xl border border-border/85 bg-card/40 backdrop-blur-md p-4 min-h-[180px] flex flex-col justify-between relative overflow-hidden shadow-inner">
-                        {isAnalyzing ? (
-                          <div className="flex flex-col items-center justify-center py-6 flex-1 space-y-4">
-                            {/* Futuristic Radar Scanner */}
-                            <div className="relative h-16 w-16 flex items-center justify-center">
-                              {/* Radar Sweep Line */}
-                              <motion.div
-                                className="absolute inset-0 rounded-full border border-primary/20 bg-gradient-to-tr from-primary/10 to-transparent"
-                                animate={{ rotate: 360 }}
-                                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                              />
-                              {/* Concentric Pulsating Rings */}
-                              <motion.div
-                                className="absolute inset-0 rounded-full border border-primary/40"
-                                initial={{ scale: 0.6, opacity: 0.8 }}
-                                animate={{ scale: 1.2, opacity: 0 }}
-                                transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
-                              />
-                              <motion.div
-                                className="absolute inset-0 rounded-full border border-accent/30"
-                                initial={{ scale: 0.4, opacity: 1 }}
-                                animate={{ scale: 1.4, opacity: 0 }}
-                                transition={{ repeat: Infinity, duration: 1.8, delay: 0.4, ease: "easeOut" }}
-                              />
-                              {/* Center Brain Icon */}
-                              <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 border border-primary/40 shadow-lg shadow-primary/20">
-                                <Brain className="h-5 w-5 text-primary animate-pulse" />
-                              </div>
-                            </div>
-
-                            <div className="space-y-1.5 text-center relative z-10">
-                              <p className="text-[11px] font-semibold text-foreground tracking-wide uppercase font-mono">AI Scan Pipeline</p>
-                              <div className="flex flex-col gap-1 items-center justify-center">
-                                <motion.p 
-                                  key={analysisStep}
-                                  initial={{ opacity: 0, y: 5 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -5 }}
-                                  className="text-[10px] text-muted-foreground font-medium animate-pulse"
-                                >
-                                  {analysisStep === 0 && "🧬 Analyzing business model..."}
-                                  {analysisStep === 1 && "🎯 Mapping ideal client profiles..."}
-                                  {analysisStep === 2 && "📡 Identifying regional targets..."}
-                                </motion.p>
-                                {/* Step Dots */}
-                                <div className="flex gap-1.5 mt-1 justify-center">
-                                  {[0, 1, 2].map((s) => (
-                                    <div
-                                      key={s}
-                                      className={cn(
-                                        "h-1.5 w-1.5 rounded-full transition-all duration-300",
-                                        analysisStep === s 
-                                          ? "bg-primary scale-125 shadow-sm shadow-primary"
-                                          : s < analysisStep 
-                                          ? "bg-success" 
-                                          : "bg-muted-foreground/30"
-                                      )}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : aiReport ? (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="space-y-3 flex-1 flex flex-col justify-between h-full"
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] bg-gradient-to-r from-primary to-accent text-white px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold shadow-sm shadow-primary/10">Ideal Persona Profile</span>
-                              </div>
-                              <p className="text-[11px] leading-relaxed text-foreground font-medium bg-card/60 p-2.5 rounded-lg border border-border/65 shadow-subtle max-h-24 overflow-y-auto scrollbar-thin">
-                                {aiReport.idealClients}
-                              </p>
-                            </div>
-
-                            <div className="space-y-2 pt-2.5 border-t border-border/60">
-                              <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider block">Identified Client Types (Click to Search)</span>
-                              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto scrollbar-none">
-                                {aiReport.keywords.map((kw, i) => (
-                                  <motion.button
-                                    key={kw}
-                                    whileHover={{ scale: 1.03 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleKeywordSelect(i)}
-                                    className={cn(
-                                      "text-[10px] px-2.5 py-1 rounded-full border transition-all duration-150 relative overflow-hidden",
-                                      selectedKeywordIndex === i
-                                        ? "border-primary bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/15"
-                                        : "border-border bg-card/80 hover:bg-muted text-muted-foreground hover:text-foreground"
-                                    )}
-                                  >
-                                    {kw}
-                                  </motion.button>
-                                ))}
-                              </div>
-                            </div>
-                          </motion.div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-6 flex-1 text-center space-y-2">
-                            <Sparkles className="h-6 w-6 text-muted-foreground/60 animate-pulse" />
-                            <p className="text-xs font-semibold text-muted-foreground">AI Persona Analysis</p>
-                            <p className="text-[10px] text-muted-foreground max-w-[200px]">Select bubbles or enter details to see identified ideal clients.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {isWizardCollapsed && (
-                <div className="flex items-center justify-between text-xs py-1 border-t border-border/40 mt-1">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span>
-                      Targeting: <strong className="text-foreground">{yourBusinessName || "Custom Search"}</strong>
-                      {clientLocation && <> in <strong className="text-foreground">{clientLocation}</strong></>}
-                    </span>
+                    <Sparkles className="h-3.5 w-3.5 text-white fill-white/20" />
+                    AI Persona Finder
+                  </Button>
+                  <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
+                    <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
+                    <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
+                    <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
                   </div>
-                  {aiReport && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground">Ideal Clients:</span>
-                      <span className="bg-background/80 px-2 py-0.5 rounded border border-border/40 text-[10px] text-foreground font-medium truncate max-w-sm">
-                        {aiReport.idealClients}
-                      </span>
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
-            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-              {isLoadingFromApi ? (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              ) : (
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={results.length}
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 4 }}
-                    transition={{ duration: 0.15 }}
-                    className="font-mono text-foreground font-semibold"
-                  >
-                    {results.length}
-                  </motion.span>
-                </AnimatePresence>
-              )}
-              <span>
-                results {filters.country ? ` in ${filters.country}` : " worldwide"}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs border-border bg-card shadow-subtle hover:bg-muted text-muted-foreground hover:text-foreground"
-                onClick={() => setIsFilterOpen(true)}
-              >
-                <Search className="h-3.5 w-3.5" />
-                Search Clients & Filters
-              </Button>
-              <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
-                <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
-                <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
-                <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
               </div>
-            </div>
-          </div>
 
-          <div className="flex min-h-0 flex-1 overflow-hidden relative">
+              <div className="flex min-h-0 flex-1 overflow-hidden relative">
             <AnimatePresence mode="wait">
               {view !== "map" && (
                 <motion.div
@@ -790,9 +555,311 @@ export default function DiscoveryPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
+  </div>
+
+  {/* AI Persona Analysis Modal */}
+  <AnimatePresence>
+    {isWizardOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.6 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setIsWizardOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-md"
+        />
+
+        {/* Modal Card Content */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+          className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-surface p-6 shadow-2xl z-10 scrollbar-thin"
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setIsWizardOpen(false)}
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-20"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          {/* Wizard Content */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2 pr-8">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Brain className="h-4.5 w-4.5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+                    AI Client Discovery Engine <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-mono">BETA</span>
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground">Select your business type and client location to identify target prospects.</p>
+                </div>
+              </div>
+              {(yourBusinessName || clientLocation || aiReport) && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 hover:text-danger hover:bg-danger/10" onClick={handleResetAi}>
+                  <RotateCcw className="h-3 w-3" /> Clear Scan
+                </Button>
+              )}
+            </div>
+
+            {/* Tabs & Bubbles Grid */}
+            <div className="space-y-2">
+              <div className="flex border-b border-border/60 pb-1 gap-4 overflow-x-auto scrollbar-none">
+                {Object.keys(BUSINESS_GROUPS).map((group) => (
+                  <button
+                    key={group}
+                    onClick={() => setActiveTab(group)}
+                    className={cn(
+                      "text-xs font-semibold pb-1 border-b-2 px-1 transition-colors whitespace-nowrap",
+                      activeTab === group
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-muted/20 rounded-md scrollbar-thin">
+                {BUSINESS_GROUPS[activeTab as keyof typeof BUSINESS_GROUPS].map((t) => {
+                  const isSelected = selectedTemplate?.category === t.category;
+                  return (
+                    <button
+                      key={t.category}
+                      onClick={() => handleTemplateSelect(t)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 focus-visible:outline-ring",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary shadow-subtle"
+                          : "border-border/80 text-muted-foreground hover:bg-muted hover:text-foreground bg-card"
+                      )}
+                    >
+                      {t.category}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Inputs & AI Report Grid */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2 space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <Building className="h-3 w-3" /> Your Business
+                    </label>
+                    <input
+                      type="text"
+                      value={yourBusinessName}
+                      onChange={(e) => {
+                        setYourBusinessName(e.target.value);
+                        setSelectedTemplate(null);
+                      }}
+                      placeholder="e.g. Apex AI Labs"
+                      className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> Your Location
+                    </label>
+                    <input
+                      type="text"
+                      value={yourLocation}
+                      onChange={(e) => setYourLocation(e.target.value)}
+                      placeholder="e.g. Palakkad, Kerala"
+                      className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <Search className="h-3 w-3" /> Target Client Location
+                    </label>
+                    <input
+                      type="text"
+                      value={clientLocation}
+                      onChange={(e) => setClientLocation(e.target.value)}
+                      placeholder="e.g. London, UK"
+                      className="w-full h-8 px-2.5 rounded-md border border-border bg-background text-xs outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-[10px] text-muted-foreground italic">
+                    * AI searches local Google Places + maps profiles dynamically in your target area.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="h-8 px-4 text-xs gap-1.5 bg-gradient-to-r from-primary to-accent hover:opacity-95 shadow-md shadow-primary/10"
+                    onClick={handleAiSearch}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <span className="h-3 w-3 animate-spin rounded-full border border-background border-t-transparent" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 text-primary-foreground fill-primary-foreground/25" />
+                        Identify Clients & Search
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* AI Report Card */}
+              <div className="lg:col-span-1 rounded-xl border border-border/85 bg-card/40 backdrop-blur-md p-4 min-h-[220px] flex flex-col justify-between relative overflow-hidden shadow-inner">
+                {isAnalyzing ? (
+                  <div className="flex flex-col items-center justify-center py-6 flex-1 space-y-4">
+                    {/* Futuristic Radar Scanner */}
+                    <div className="relative h-16 w-16 flex items-center justify-center">
+                      {/* Radar Sweep Line */}
+                      <motion.div
+                        className="absolute inset-0 rounded-full border border-primary/20 bg-gradient-to-tr from-primary/10 to-transparent"
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                      />
+                      {/* Concentric Pulsating Rings */}
+                      <motion.div
+                        className="absolute inset-0 rounded-full border border-primary/40"
+                        initial={{ scale: 0.6, opacity: 0.8 }}
+                        animate={{ scale: 1.2, opacity: 0 }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "easeOut" }}
+                      />
+                      <motion.div
+                        className="absolute inset-0 rounded-full border border-accent/30"
+                        initial={{ scale: 0.4, opacity: 1 }}
+                        animate={{ scale: 1.4, opacity: 0 }}
+                        transition={{ repeat: Infinity, duration: 1.8, delay: 0.4, ease: "easeOut" }}
+                      />
+                      {/* Center Brain Icon */}
+                      <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 border border-primary/40 shadow-lg shadow-primary/20">
+                        <Brain className="h-5 w-5 text-primary animate-pulse" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-center relative z-10">
+                      <p className="text-[11px] font-semibold text-foreground tracking-wide uppercase font-mono">AI Scan Pipeline</p>
+                      <div className="flex flex-col gap-1 items-center justify-center">
+                        <motion.p 
+                          key={analysisStep}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="text-[10px] text-muted-foreground font-medium animate-pulse"
+                        >
+                          {analysisStep === 0 && "🧬 Analyzing business model..."}
+                          {analysisStep === 1 && "🎯 Mapping ideal client profiles..."}
+                          {analysisStep === 2 && "📡 Identifying regional targets..."}
+                        </motion.p>
+                        {/* Step Dots */}
+                        <div className="flex gap-1.5 mt-1 justify-center">
+                          {[0, 1, 2].map((s) => (
+                            <div
+                              key={s}
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                                analysisStep === s 
+                                  ? "bg-primary scale-125 shadow-sm shadow-primary"
+                                  : s < analysisStep 
+                                  ? "bg-success" 
+                                  : "bg-muted-foreground/30"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : aiReport ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    className="space-y-3 flex-1 flex flex-col justify-between h-full"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] bg-gradient-to-r from-primary to-accent text-white px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold shadow-sm shadow-primary/10">Ideal Persona Profile</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-foreground font-medium bg-card/60 p-2.5 rounded-lg border border-border/65 shadow-subtle max-h-24 overflow-y-auto scrollbar-thin">
+                        {aiReport.idealClients}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 pt-2.5 border-t border-border/60">
+                      <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider block">Identified Client Types (Click to Search)</span>
+                      <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto scrollbar-none">
+                        {aiReport.keywords.map((kw, i) => (
+                          <motion.button
+                            key={kw}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleKeywordSelect(i)}
+                            className={cn(
+                              "text-[10px] px-2.5 py-1 rounded-full border transition-all duration-150 relative overflow-hidden",
+                              selectedKeywordIndex === i
+                                ? "border-primary bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/15"
+                                : "border-border bg-card/80 hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {kw}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Get Clients Button */}
+                    <div className="pt-2 border-t border-border/60">
+                      <Button
+                        onClick={() => {
+                          setIsWizardOpen(false);
+                          setHasSearched(true);
+                          setView("split");
+                          const parsed = parseLocation(aiReport.targetLocation);
+                          const kw = aiReport.keywords[selectedKeywordIndex];
+                          setFilters(prev => ({
+                            ...prev,
+                            keyword: kw,
+                            city: parsed.city,
+                            country: parsed.country
+                          }));
+                        }}
+                        disabled={selectedKeywordIndex === null || selectedKeywordIndex === undefined}
+                        className="w-full h-8 text-xs font-semibold uppercase tracking-wider bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white"
+                      >
+                        Get Clients
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 flex-1 text-center space-y-2">
+                    <Sparkles className="h-6 w-6 text-muted-foreground/60 animate-pulse" />
+                    <p className="text-xs font-semibold text-muted-foreground">AI Persona Analysis</p>
+                    <p className="text-[10px] text-muted-foreground max-w-[200px]">Select bubbles or enter details to see identified ideal clients.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>
+</div>
   );
 }
 

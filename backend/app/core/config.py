@@ -29,6 +29,11 @@ class Settings(BaseSettings):
 
     sendgrid_api_key: str | None = None
 
+    stripe_secret_key: str | None = None
+    stripe_publishable_key: str | None = None
+    stripe_webhook_secret: str | None = None
+
+
     rate_limit_per_minute_default: int = 120
 
     cors_origins: list[str] = ["http://localhost:3000"]

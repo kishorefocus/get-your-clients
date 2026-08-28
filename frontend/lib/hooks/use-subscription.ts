@@ -26,8 +26,13 @@ export function useSubscribe() {
     onSuccess: (newSub) => {
       qc.invalidateQueries({ queryKey: SUB_KEYS.status });
       qc.invalidateQueries({ queryKey: ORG_KEYS.me });
-      toast.success(`Successfully upgraded to ${newSub.plan} plan!`);
+      if (newSub.checkout_url) {
+        window.location.href = newSub.checkout_url;
+      } else {
+        toast.success(`Successfully upgraded to ${newSub.plan} plan!`);
+      }
     },
+
     onError: (err: Error) => {
       toast.error(err.message || "Failed to upgrade subscription");
     },

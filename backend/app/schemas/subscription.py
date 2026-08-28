@@ -10,8 +10,10 @@ class SubscriptionResponse(BaseModel):
     plan: str
     status: str
     current_period_end: datetime | None = None
+    checkout_url: str | None = None
 
     model_config = {"from_attributes": True}
+
 
 
 class SubscribeRequest(BaseModel):
