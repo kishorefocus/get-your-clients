@@ -20,3 +20,31 @@ export function initials(name: string) {
     .join("")
     .toUpperCase();
 }
+
+const countryNameMap: Record<string, string> = {
+  TR: "Turkey",
+  KE: "Kenya",
+  SE: "Sweden",
+  JP: "Japan",
+  ZA: "South Africa",
+  MX: "Mexico",
+  NL: "Netherlands",
+  PH: "Philippines",
+  NO: "Norway",
+  GB: "United Kingdom",
+  IN: "India",
+  US: "United States",
+  CA: "Canada",
+  AU: "Australia",
+  DE: "Germany",
+  FR: "France",
+  IT: "Italy",
+  ES: "Spain",
+  GL: "Global"
+};
+
+export function formatCountryName(code: string): string {
+  if (!code) return "Global";
+  const upper = code.toUpperCase();
+  return countryNameMap[upper] || code;
+}

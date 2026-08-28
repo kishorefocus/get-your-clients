@@ -38,7 +38,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { getFiles } from "@/lib/mock/profile";
-import { cn, formatCoords, initials } from "@/lib/utils";
+import { cn, formatCoords, initials, formatCountryName } from "@/lib/utils";
 import { PipelineStage } from "@/types";
 import { useAuth } from "@/lib/hooks/use-auth";
 import {
@@ -231,7 +231,7 @@ export default function ClientProfilePage() {
                   {lead.rating && (
                     <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-accent text-accent" /> {lead.rating} ({lead.reviewCount} reviews)</span>
                   )}
-                  <span className="manifest-chip">{formatCoords(lead.lat, lead.lng)} · {lead.countryCode}</span>
+                  <span className="manifest-chip">{formatCoords(lead.lat, lead.lng)} · {formatCountryName(lead.countryCode)}</span>
                 </div>
               </div>
             </div>

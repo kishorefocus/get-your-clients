@@ -5,7 +5,7 @@ import { Star, MapPin, Phone, MessageSquare, Bookmark, Plus } from "lucide-react
 import { Lead } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, formatCoords, initials } from "@/lib/utils";
+import { cn, formatCoords, initials, formatCountryName } from "@/lib/utils";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { motion } from "framer-motion";
 import { staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
@@ -143,7 +143,7 @@ export function LeadCard({
 
           <div className="mt-2">
             <span className={cn("manifest-chip", isLocked && "opacity-50 select-none")}>
-              {isLocked ? "XX.XX · LOCKED" : `${formatCoords(lead.lat, lead.lng)} · ${lead.countryCode}`}
+              {isLocked ? "XX.XX · LOCKED" : `${formatCoords(lead.lat, lead.lng)} · ${formatCountryName(lead.countryCode)}`}
             </span>
           </div>
 

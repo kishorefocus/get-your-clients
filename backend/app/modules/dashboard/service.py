@@ -16,6 +16,33 @@ from app.schemas.dashboard import (
     FunnelStageItem, DashboardAnalyticsResponse
 )
 
+COUNTRY_NAME_MAP = {
+    "TR": "Turkey",
+    "KE": "Kenya",
+    "SE": "Sweden",
+    "JP": "Japan",
+    "ZA": "South Africa",
+    "MX": "Mexico",
+    "NL": "Netherlands",
+    "PH": "Philippines",
+    "NO": "Norway",
+    "GB": "United Kingdom",
+    "IN": "India",
+    "US": "United States",
+    "CA": "Canada",
+    "AU": "Australia",
+    "DE": "Germany",
+    "FR": "France",
+    "IT": "Italy",
+    "ES": "Spain"
+}
+
+def get_country_name(code: str | None) -> str:
+    if not code:
+        return "Global"
+    upper = code.upper()
+    return COUNTRY_NAME_MAP.get(upper, code)
+
 async def get_overview(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardOverviewResponse:
     # 1. Fetch all claimed client ids and their stages
     state_stmt = (
@@ -131,7 +158,7 @@ async def get_overview(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardOverv
         for country, count in countries_res:
             top_countries.append(
                 CountryPctItem(
-                    country=country or "Other",
+                    country=get_country_name(country),
                     pct=round((count / total_leads * 100), 1)
                 )
             )
@@ -249,7 +276,7 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
             won_in_c = (await db.execute(won_stmt)).scalar() or 0
             country_metrics.append(
                 CountryMetricItem(
-                    country=country or "Other",
+                    country=get_country_name(country),
                     code=country or "GL",
                     leads=count,
                     won=won_in_c

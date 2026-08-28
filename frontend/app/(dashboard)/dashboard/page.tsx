@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { mockLeads } from "@/lib/mock/leads";
-import { cn, formatCoords } from "@/lib/utils";
+import { cn, formatCoords, formatCountryName } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerChild, fadeUp, cardHoverProps, EASE_OUT, springUI } from "@/lib/motion";
 import { useCountUp } from "@/lib/hooks/use-count-up";
@@ -329,7 +329,7 @@ export default function DashboardOverviewPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-3">
                         <span className="manifest-chip hidden sm:flex">
-                          {lead.lat && lead.lng ? formatCoords(lead.lat, lead.lng) : "—"} · {lead.countryCode}
+                          {lead.lat && lead.lng ? formatCoords(lead.lat, lead.lng) : "—"} · {formatCountryName(lead.countryCode)}
                         </span>
                         <Badge
                           variant={

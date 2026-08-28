@@ -6,7 +6,7 @@ import { Calendar, MapPin, GripVertical, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Lead } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { cn, initials } from "@/lib/utils";
+import { cn, initials, formatCountryName } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
 import { staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
@@ -57,7 +57,7 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
 
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <MapPin className="h-3 w-3 text-muted-foreground/80" /> 
-        <span className="truncate">{lead.city}, {lead.countryCode}</span>
+        <span className="truncate">{lead.city}, {formatCountryName(lead.countryCode)}</span>
       </div>
 
       <div className="flex items-center justify-between mt-1.5">
