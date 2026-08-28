@@ -26,3 +26,10 @@ export async function cancelSubscription(): Promise<SubscriptionResponse> {
     method: "POST",
   });
 }
+
+export async function confirmPayment(sessionId: string): Promise<{ status: string; plan: string }> {
+  return apiFetch<{ status: string; plan: string }>(`/api/v1/subscriptions/confirm-payment?session_id=${sessionId}`, {
+    method: "POST",
+  });
+}
+

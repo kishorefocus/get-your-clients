@@ -193,6 +193,39 @@ async def cancel_subscription(
     return sub
 
 
+@router.post("/confirm-payment")
+async def confirm_payment(
+    session_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    stripe.api_key = settings.stripe_secret_key
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to retrieve Stripe session: {str(e)}",
+        )
+
+    metadata = session.get("metadata", {})
+    org_id_str = metadata.get("org_id")
+    if not org_id_str or org_id_str != str(current_user.org_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Session does not belong to your organization",
+        )
+
+    if session.get("payment_status") != "unpaid":
+        await fulfill_checkout_session(session, db)
+        return {"status": "success", "plan": metadata.get("plan")}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment is not completed",
+        )
+
+
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request,
