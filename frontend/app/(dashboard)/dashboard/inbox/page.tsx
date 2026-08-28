@@ -64,11 +64,18 @@ function ActiveChatConnector({ conversationId }: { conversationId: string }) {
 }
 
 export default function InboxPage() {
-  const { activeConversationId, fetchConversations } = useChatStore();
+  const { conversations, activeConversationId, setActiveConversation, fetchConversations } = useChatStore();
 
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  // Auto-select the first conversation if none is active
+  useEffect(() => {
+    if (!activeConversationId && conversations.length > 0) {
+      setActiveConversation(conversations[0].id);
+    }
+  }, [activeConversationId, conversations, setActiveConversation]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

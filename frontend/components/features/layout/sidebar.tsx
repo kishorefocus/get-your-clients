@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useChatStore } from "@/lib/stores/chat-store";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -33,6 +34,16 @@ const nav = [
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const { totalUnread, fetchConversations } = useChatStore((s) => ({
+    totalUnread: s.totalUnread(),
+    fetchConversations: s.fetchConversations,
+  }));
+
+  // Fetch conversations to ensure unread badge is populated
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   // Load from local storage on client side
   useEffect(() => {
@@ -96,6 +107,7 @@ export function Sidebar() {
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname?.startsWith(item.href));
           const Icon = item.icon;
+          const badgeValue = item.href === "/dashboard/inbox" ? totalUnread : item.badge;
 
           return (
             <Link
@@ -139,7 +151,7 @@ export function Sidebar() {
               </span>
 
               {/* Badge */}
-              {item.badge ? (
+              {badgeValue ? (
                 isCollapsed ? (
                   <span className="absolute top-1.5 right-1.5 flex h-2 w-2 rounded-full bg-accent" />
                 ) : (
@@ -148,7 +160,7 @@ export function Sidebar() {
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 3 }}
                   >
-                    {item.badge}
+                    {badgeValue}
                   </motion.span>
                 )
               ) : null}

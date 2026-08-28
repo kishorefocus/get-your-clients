@@ -36,7 +36,7 @@ function SettingsContent() {
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar title="Settings" />
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-        <Tabs defaultValue="profile" onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 bg-muted/40 relative">
             {tabs.map((t) => (
               <TabsTrigger

@@ -45,6 +45,44 @@ async def register_org(db: AsyncSession, payload: RegisterOrgRequest) -> TokenPa
         stage = PipelineStage(org_id=org.id, name=name, position=pos, is_terminal=is_term)
         db.add(stage)
 
+    # Seed a support contact, thread, and unread welcome message
+    from app.models.client import Client
+    from app.models.message import Message, MessageThread
+
+    support_client = Client(
+        org_id=org.id,
+        name="GlobalReach Support",
+        email="support@globalreach.io",
+        phone="+1 (555) 019-9000",
+        website="https://globalreach.io",
+        address="100 Pine Street, San Francisco, CA 94111",
+        city="San Francisco",
+        country="US",
+        latitude=37.79,
+        longitude=-122.40,
+        rating=5.0,
+        source="system",
+        consent_status="granted"
+    )
+    db.add(support_client)
+    await db.flush()
+
+    thread = MessageThread(
+        org_id=org.id,
+        client_id=support_client.id,
+        is_archived=False
+    )
+    db.add(thread)
+    await db.flush()
+
+    welcome_msg = Message(
+        thread_id=thread.id,
+        sender_user_id=None,
+        body="Welcome to GlobalReach! We're thrilled to have you on board. Start discovering leads, claiming them to your pipeline, and scheduling outreach to grow your client base. If you need any assistance, we're here to help!",
+        status="sent"
+    )
+    db.add(welcome_msg)
+
     await db.commit()
 
     return TokenPairResponse(

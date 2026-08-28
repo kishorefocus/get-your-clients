@@ -68,9 +68,60 @@ async def list_threads(db: AsyncSession, *, org_id: uuid.UUID) -> list[dict]:
         .where(MessageThread.org_id == org_id, MessageThread.is_archived == False)
     )
     res = await db.execute(stmt)
+    rows = res.all()
+
+    if not rows:
+        from app.models.client import Client as ClientModel
+        from app.models.message import Message as MessageModel, MessageThread as MessageThreadModel
+
+        # Check if welcome contact exists, or create it
+        support_client = await db.scalar(
+            select(ClientModel).where(ClientModel.org_id == org_id, ClientModel.email == "support@globalreach.io")
+        )
+        if not support_client:
+            support_client = ClientModel(
+                org_id=org_id,
+                name="GlobalReach Support",
+                email="support@globalreach.io",
+                phone="+1 (555) 019-9000",
+                website="https://globalreach.io",
+                address="100 Pine Street, San Francisco, CA 94111",
+                city="San Francisco",
+                country="US",
+                latitude=37.79,
+                longitude=-122.40,
+                rating=5.0,
+                source="system",
+                consent_status="granted"
+            )
+            db.add(support_client)
+            await db.flush()
+
+        # Create thread
+        thread = MessageThreadModel(
+            org_id=org_id,
+            client_id=support_client.id,
+            is_archived=False
+        )
+        db.add(thread)
+        await db.flush()
+
+        # Create unread welcome message
+        welcome_msg = MessageModel(
+            thread_id=thread.id,
+            sender_user_id=None,
+            body="Welcome to GlobalReach! We're thrilled to have you on board. Start discovering leads, claiming them to your pipeline, and scheduling outreach to grow your client base. If you need any assistance, we're here to help!",
+            status="sent"
+        )
+        db.add(welcome_msg)
+        await db.commit()
+
+        # Re-execute query to fetch the seeded thread
+        res = await db.execute(stmt)
+        rows = res.all()
     
     threads_data = []
-    for row in res.all():
+    for row in rows:
         thread, client_name, client_country = row
         
         # Last message

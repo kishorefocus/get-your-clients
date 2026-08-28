@@ -24,11 +24,22 @@ interface ChatStore {
 }
 
 export function backendMsgToFrontend(conversationId: string, msg: MessageResponse): Message {
+  let senderName = "Remote";
+  if (msg.sender_user_id) {
+    senderName = "You";
+  } else {
+    const state = useChatStore.getState();
+    const conv = state.conversations?.find((c) => c.id === conversationId);
+    if (conv) {
+      senderName = conv.leadName;
+    }
+  }
+
   return {
     id: msg.id,
     conversationId,
     senderId: msg.sender_user_id ?? "unknown",
-    senderName: msg.sender_user_id ? "You" : "Remote",
+    senderName,
     content: msg.body,
     timestamp: msg.created_at,
     status: msg.status as Message["status"],
