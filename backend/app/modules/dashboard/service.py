@@ -81,38 +81,38 @@ async def get_overview(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardOverv
     total_outreach = (await db.execute(outreach_stmt)).scalar() or 0
 
     # Calculate rates
-    response_rate = (responded_count / contacted_count * 100) if contacted_count > 0 else 23.8
+    response_rate = (responded_count / contacted_count * 100) if contacted_count > 0 else 0.0
     deals_value = (won_count + negotiating_count) * 15  # Estimate $15K per deal in pipeline
 
     # Build KPIs list
     kpis = [
         KpiItem(
             label="Leads found",
-            rawValue=total_leads or 2481,
-            display=f"{total_leads:,}" if total_leads > 0 else "2,481",
-            delta="+12.4%",
-            spark=[30, 42, 38, 55, 47, 63, 72]
+            rawValue=total_leads,
+            display=f"{total_leads:,}",
+            delta="+0.0%",
+            spark=[0, 0, 0, 0, 0, 0, 0] if total_leads == 0 else [30, 42, 38, 55, 47, 63, 72]
         ),
         KpiItem(
             label="Outreach sent",
-            rawValue=total_outreach or 914,
-            display=str(total_outreach) if total_outreach > 0 else "914",
-            delta="+6.1%",
-            spark=[20, 28, 22, 35, 30, 42, 48]
+            rawValue=total_outreach,
+            display=str(total_outreach),
+            delta="+0.0%",
+            spark=[0, 0, 0, 0, 0, 0, 0] if total_outreach == 0 else [20, 28, 22, 35, 30, 42, 48]
         ),
         KpiItem(
             label="Response rate",
-            rawValue=response_rate,
+            rawValue=round(response_rate * 10, 1),
             display=f"{response_rate:.1f}%",
-            delta="+2.3pt",
-            spark=[18, 21, 20, 22, 23, 22, 24]
+            delta="+0.0pt",
+            spark=[0, 0, 0, 0, 0, 0, 0] if contacted_count == 0 else [18, 21, 20, 22, 23, 22, 24]
         ),
         KpiItem(
             label="Deals in pipeline",
-            rawValue=deals_value or 186,
-            display=f"${deals_value}K" if deals_value > 0 else "$186K",
-            delta="+18.9%",
-            spark=[80, 95, 88, 110, 105, 130, 145]
+            rawValue=deals_value,
+            display=f"${deals_value}K",
+            delta="+0.0%",
+            spark=[0, 0, 0, 0, 0, 0, 0] if deals_value == 0 else [80, 95, 88, 110, 105, 130, 145]
         ),
     ]
 
@@ -165,12 +165,7 @@ async def get_overview(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardOverv
             
     # Default top countries if empty
     if not top_countries:
-        top_countries = [
-            CountryPctItem(country="Turkey", pct=38),
-            CountryPctItem(country="Sweden", pct=31),
-            CountryPctItem(country="Japan", pct=24),
-            CountryPctItem(country="Netherlands", pct=17),
-        ]
+        top_countries = []
 
     return DashboardOverviewResponse(
         kpis=kpis,
@@ -205,51 +200,81 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
     calls_stmt = select(func.count(Call.id)).where(Call.org_id == org_id)
     total_calls = (await db.execute(calls_stmt)).scalar() or 0
 
-    conversion_rate = (won_count / total_leads * 100) if total_leads > 0 else 14.3
-    avg_response_rate = (responded_count / contacted_count * 100) if contacted_count > 0 else 23.8
+    conversion_rate = (won_count / total_leads * 100) if total_leads > 0 else 0.0
+    avg_response_rate = (responded_count / contacted_count * 100) if contacted_count > 0 else 0.0
 
     kpis = [
         AnalyticsKpiItem(
             label="Total leads discovered",
-            rawValue=total_leads or 2481,
-            display=f"{total_leads:,}" if total_leads > 0 else "2,481",
-            delta="+12.4%"
+            rawValue=total_leads,
+            display=f"{total_leads:,}",
+            delta="+0.0%"
         ),
         AnalyticsKpiItem(
             label="Conversion rate",
             rawValue=round(conversion_rate * 10, 1),
             display=f"{conversion_rate:.1f}%",
-            delta="+1.4pt"
+            delta="+0.0pt"
         ),
         AnalyticsKpiItem(
             label="Avg. response rate",
             rawValue=round(avg_response_rate * 10, 1),
             display=f"{avg_response_rate:.1f}%",
-            delta="+3.1pt"
+            delta="+0.0pt"
         ),
         AnalyticsKpiItem(
             label="Total calls made",
-            rawValue=total_calls or 315,
-            display=str(total_calls) if total_calls > 0 else "315",
-            delta="+22%"
+            rawValue=total_calls,
+            display=str(total_calls),
+            delta="+0.0%"
         ),
     ]
 
     # 2. Weekly Performance (last 12 weeks)
-    weekly_perf = [
-        WeeklyPerformanceItem(week="W22", outreach=68, responses=14, deals=3),
-        WeeklyPerformanceItem(week="W23", outreach=82, responses=21, deals=4),
-        WeeklyPerformanceItem(week="W24", outreach=74, responses=18, deals=5),
-        WeeklyPerformanceItem(week="W25", outreach=91, responses=26, deals=6),
-        WeeklyPerformanceItem(week="W26", outreach=105, responses=31, deals=8),
-        WeeklyPerformanceItem(week="W27", outreach=97, responses=28, deals=7),
-        WeeklyPerformanceItem(week="W28", outreach=118, responses=35, deals=9),
-        WeeklyPerformanceItem(week="W29", outreach=124, responses=38, deals=11),
-        WeeklyPerformanceItem(week="W30", outreach=109, responses=29, deals=8),
-        WeeklyPerformanceItem(week="W31", outreach=132, responses=44, deals=13),
-        WeeklyPerformanceItem(week="W32", outreach=141, responses=48, deals=15),
-        WeeklyPerformanceItem(week="W33", outreach=156, responses=54, deals=17),
-    ]
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    weekly_perf = []
+    
+    for i in range(11, -1, -1):
+        start_date = now - timedelta(weeks=i+1)
+        end_date = now - timedelta(weeks=i)
+        week_label = f"W{start_date.isocalendar()[1]}"
+        
+        # Count outreach in range
+        outreach_stmt = select(func.count(Interaction.id)).where(
+            Interaction.org_id == org_id,
+            Interaction.created_at >= start_date,
+            Interaction.created_at < end_date,
+            Interaction.type.in_([InteractionType.CALL.value, InteractionType.CHAT_MESSAGE.value, InteractionType.EMAIL.value, InteractionType.SMS.value])
+        )
+        outreach_count = (await db.execute(outreach_stmt)).scalar() or 0
+        
+        # Count responses in range
+        resp_stmt = select(func.count(Message.id)).join(MessageThread, Message.thread_id == MessageThread.id).where(
+            MessageThread.org_id == org_id,
+            Message.created_at >= start_date,
+            Message.created_at < end_date,
+            Message.sender_user_id.is_(None)
+        )
+        responses_count = (await db.execute(resp_stmt)).scalar() or 0
+        
+        # Count won deals in range
+        deals_stmt = select(func.count(ClientPipelineState.client_id)).join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id).where(
+            ClientPipelineState.org_id == org_id,
+            ClientPipelineState.updated_at >= start_date,
+            ClientPipelineState.updated_at < end_date,
+            PipelineStage.name.ilike("%won%")
+        )
+        deals_count = (await db.execute(deals_stmt)).scalar() or 0
+        
+        weekly_perf.append(
+            WeeklyPerformanceItem(
+                week=week_label,
+                outreach=outreach_count,
+                responses=responses_count,
+                deals=deals_count
+            )
+        )
 
     # 3. Country breakdown
     country_metrics = []
@@ -286,12 +311,7 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
         country_metrics = country_metrics[:8]
 
     if not country_metrics:
-        country_metrics = [
-            CountryMetricItem(country="Turkey", code="TR", leads=412, won=48),
-            CountryMetricItem(country="Japan", code="JP", leads=387, won=61),
-            CountryMetricItem(country="Sweden", code="SE", leads=298, won=44),
-            CountryMetricItem(country="Netherlands", code="NL", leads=198, won=22),
-        ]
+        country_metrics = []
 
     # 4. Rep Stats
     rep_stats = []
@@ -321,23 +341,19 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
         )
         rep_outreach = (await db.execute(u_out_stmt)).scalar() or 0
 
+        # Calculate response rate for this rep
+        rep_resp_rate = (rep_won / rep_outreach * 100) if rep_outreach > 0 else 0.0
         rep_stats.append(
             RepStatItem(
                 id=str(user.id),
                 name=user.full_name or user.email,
                 dealsWon=rep_won,
-                outreachSent=rep_outreach or random.randint(10, 50),
-                responseRate=28.5,
+                outreachSent=rep_outreach,
+                responseRate=round(rep_resp_rate, 1),
                 callsMade=rep_calls
             )
         )
     rep_stats.sort(key=lambda x: x.dealsWon, reverse=True)
-
-    if not rep_stats:
-        rep_stats = [
-            RepStatItem(id="tm2", name="Marcus L.", dealsWon=31, outreachSent=284, responseRate=34.5, callsMade=89),
-            RepStatItem(id="tm6", name="Yuki M.", dealsWon=28, outreachSent=251, responseRate=31.2, callsMade=74),
-        ]
 
     # 5. Funnel Data
     funnel_data = []

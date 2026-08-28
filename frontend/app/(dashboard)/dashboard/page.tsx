@@ -309,42 +309,49 @@ export default function DashboardOverviewPage() {
               </CardHeader>
               <CardContent className="space-y-2 pb-5">
                 <AnimatePresence initial={false}>
-                  {activityToRender.map((lead) => (
-                    <motion.div
-                       key={lead.id}
-                      layout
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12, height: 0 }}
-                      transition={{ duration: 0.2, ease: EASE_OUT }}
-                      className={`flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-muted/40 cursor-default ${
-                        newId === lead.id ? "border-primary/40 bg-primary/5" : "border-border"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{lead.name}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {lead.city}, {lead.country} · {lead.category}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span className="manifest-chip hidden sm:flex">
-                          {lead.lat && lead.lng ? formatCoords(lead.lat, lead.lng) : "—"} · {formatCountryName(lead.countryCode)}
-                        </span>
-                        <Badge
-                          variant={
-                            lead.stage === "won"
-                              ? "success"
-                              : lead.stage === "lost"
-                              ? "danger"
-                              : "default"
-                          }
-                        >
-                          {lead.stage}
-                        </Badge>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {activityToRender.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <p className="text-sm font-medium text-muted-foreground">No recent activity</p>
+                      <p className="text-xs text-muted-foreground/80 mt-1">Claim a lead from the Discovery page to start outreach.</p>
+                    </div>
+                  ) : (
+                    activityToRender.map((lead) => (
+                      <motion.div
+                        key={lead.id}
+                        layout
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 12, height: 0 }}
+                        transition={{ duration: 0.2, ease: EASE_OUT }}
+                        className={`flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-muted/40 cursor-default ${
+                          newId === lead.id ? "border-primary/40 bg-primary/5" : "border-border"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{lead.name}</p>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {lead.city}, {lead.country} · {lead.category}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <span className="manifest-chip hidden sm:flex">
+                            {lead.lat && lead.lng ? formatCoords(lead.lat, lead.lng) : "—"} · {formatCountryName(lead.countryCode)}
+                          </span>
+                          <Badge
+                            variant={
+                              lead.stage === "won"
+                                ? "success"
+                                : lead.stage === "lost"
+                                ? "danger"
+                                : "default"
+                            }
+                          >
+                            {lead.stage}
+                          </Badge>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </AnimatePresence>
               </CardContent>
             </Card>

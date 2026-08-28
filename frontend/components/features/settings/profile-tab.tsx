@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerChild, tapProps } from "@/lib/motion";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 const languages = ["English (US)", "English (UK)", "Spanish", "French", "German", "Japanese", "Turkish", "Arabic"];
 const timezones = ["UTC", "UTC+1 (CET)", "UTC+3 (IST)", "UTC+5:30 (India)", "UTC+8 (CST)", "UTC+9 (JST)", "UTC-5 (EST)", "UTC-8 (PST)"];
@@ -14,8 +15,9 @@ const timezones = ["UTC", "UTC+1 (CET)", "UTC+3 (IST)", "UTC+5:30 (India)", "UTC
 const MotionButton = motion(Button);
 
 export function ProfileTab() {
-  const [name, setName] = useState("Kishore R.");
-  const [email, setEmail] = useState("kishore@globalreach.io");
+  const { user, logout } = useAuth();
+  const [name, setName] = useState(user?.full_name || "Kishore R.");
+  const [email, setEmail] = useState(user?.email || "test@example.com");
   const [lang, setLang] = useState("English (US)");
   const [tz, setTz] = useState("UTC+5:30 (India)");
   const [saved, setSaved] = useState(false);
@@ -90,10 +92,20 @@ export function ProfileTab() {
         </div>
       </motion.div>
 
-      <motion.div variants={staggerChild} className="flex items-center gap-3">
+      <motion.div variants={staggerChild} className="flex items-center gap-3 pt-4 border-t border-border/40">
         <MotionButton onClick={handleSave} className="gap-2" {...tapProps}>
           <Save className="h-3.5 w-3.5" />
           {saved ? "Saved!" : "Save changes"}
+        </MotionButton>
+        <MotionButton
+          variant="outline"
+          type="button"
+          className="gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={logout}
+          {...tapProps}
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
         </MotionButton>
         {saved && <p className="text-xs text-success animate-fade-in">Your profile has been updated.</p>}
       </motion.div>

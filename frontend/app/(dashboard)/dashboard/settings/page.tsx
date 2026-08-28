@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/features/layout/topbar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ProfileTab } from "@/components/features/settings/profile-tab";
@@ -9,8 +10,8 @@ import { IntegrationsTab } from "@/components/features/settings/integrations-tab
 import { NotificationsTab } from "@/components/features/settings/notifications-tab";
 import { AuditLogsTab } from "@/components/features/settings/audit-logs-tab";
 import { User, CreditCard, Puzzle, Bell, Shield } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn, tapProps, springUI } from "@/lib/motion";
+import { motion } from "framer-motion";
+import { springUI } from "@/lib/motion";
 
 const tabs = [
   { value: "profile", label: "Profile", icon: User, Component: ProfileTab },
@@ -20,8 +21,16 @@ const tabs = [
   { value: "audit", label: "Audit Logs", icon: Shield, Component: AuditLogsTab },
 ];
 
-export default function SettingsPage() {
+function SettingsContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState("profile");
+
+  useEffect(() => {
+    if (tabParam && tabs.some((t) => t.value === tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -64,5 +73,17 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-surface">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }

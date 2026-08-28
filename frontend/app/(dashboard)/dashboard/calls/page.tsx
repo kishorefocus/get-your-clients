@@ -42,10 +42,10 @@ export default function CallsPage() {
   const avgDuration = `${avgDurationMin}:${avgDurationSecStr}`;
 
   const statsToRender = [
-    { label: "Calls today", value: String(callsTodayCount || 12), icon: PhoneCall, color: "text-primary" },
-    { label: "Answered", value: String(answeredCount || 8), icon: PhoneCall, color: "text-success" },
-    { label: "Missed", value: String(missedCount || 4), icon: PhoneMissed, color: "text-danger" },
-    { label: "Avg duration", value: callsToUse.length > 0 ? avgDuration : "6:42", icon: Clock, color: "text-accent-foreground" },
+    { label: "Calls today", value: String(callsTodayCount), icon: PhoneCall, color: "text-primary" },
+    { label: "Answered", value: String(answeredCount), icon: PhoneCall, color: "text-success" },
+    { label: "Missed", value: String(missedCount), icon: PhoneMissed, color: "text-danger" },
+    { label: "Avg duration", value: callsToUse.length > 0 ? avgDuration : "0:00", icon: Clock, color: "text-accent-foreground" },
   ];
 
   const startCall = (log: CallLog) => setActiveCall(log);

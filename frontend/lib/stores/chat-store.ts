@@ -138,13 +138,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ isLoadingConversations: true });
     try {
       const apiConversations = await listConversations();
-      if (apiConversations && apiConversations.length > 0) {
-        set({ conversations: apiConversations, isLoadingConversations: false });
-      } else {
-        set({ conversations: mockConversations, isLoadingConversations: false });
-      }
+      set({ conversations: apiConversations || [], isLoadingConversations: false });
     } catch (err) {
-      set({ conversations: mockConversations, isLoadingConversations: false });
+      set({ conversations: [], isLoadingConversations: false });
     }
   },
 
