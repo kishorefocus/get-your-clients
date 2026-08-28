@@ -40,7 +40,7 @@ export default function LoginPage() {
     try {
       await login({ email, password: pw });
       setState("success");
-      setTimeout(() => router.push("/dashboard"), 1400);
+      setTimeout(() => router.push("/dashboard/discovery"), 1400);
     } catch (err) {
       let msg = "Invalid email or password. Please try again.";
       if (err instanceof ApiError) {

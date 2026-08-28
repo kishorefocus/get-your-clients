@@ -21,8 +21,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/lib/stores/chat-store";
 
 const nav = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/discovery", label: "Discovery", icon: Search },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/dashboard/inbox", label: "Inbox", icon: Inbox, badge: 4 },
   { href: "/dashboard/calls", label: "Calls", icon: Phone },
@@ -87,7 +87,7 @@ export function Sidebar() {
             </motion.span>
           )}
         </div>
-        
+
         <button
           onClick={handleToggle}
           className={cn(
