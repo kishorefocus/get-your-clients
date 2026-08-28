@@ -48,21 +48,19 @@ export default function SettingsPage() {
             ))}
           </TabsList>
           
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              {tabs.map((t) => (
-                <TabsContent key={t.value} value={t.value} className="mt-0 focus-visible:outline-none">
+          {tabs.map((t) => (
+            <TabsContent key={t.value} value={t.value} className="mt-0 focus-visible:outline-none">
+              {activeTab === t.value && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
                   <t.Component />
-                </TabsContent>
-              ))}
-            </motion.div>
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
     </div>
