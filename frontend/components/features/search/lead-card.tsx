@@ -10,6 +10,7 @@ import { useLeadsStore } from "@/lib/stores/leads-store";
 import { motion } from "framer-motion";
 import { staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
 import { toast } from "sonner";
+import { usePipelineStages, useMoveClient } from "@/lib/hooks/use-pipeline";
 
 const stageColor: Record<Lead["stage"], "default" | "secondary" | "success" | "danger" | "accent"> = {
   new: "secondary",
@@ -32,11 +33,45 @@ export function LeadCard({
   onSelect?: (id: string) => void;
 }) {
   const toggleSaved = useLeadsStore((s) => s.toggleSaved);
+  const setStoreStage = useLeadsStore((s) => s.setStage);
+
+  const { data: stages = [] } = usePipelineStages();
+  const moveMutation = useMoveClient();
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleSaved(lead.id);
     toast.success(lead.savedByMe ? "Removed from saved" : "Lead saved to your list");
+  };
+
+  const handleAddToPipeline = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lead.savedByMe) {
+      toast.info("This lead is already in your pipeline!");
+      return;
+    }
+    const firstStage = stages.find((s) => s.position === 0) || stages[0];
+    if (!firstStage) {
+      toast.error("Pipeline stages not loaded yet. Please try again.");
+      return;
+    }
+
+    // Optimistic local update
+    setStoreStage(lead.id, "new");
+    toggleSaved(lead.id);
+
+    // Call API mutation
+    moveMutation.mutate(
+      {
+        client_id: lead.id,
+        stage_id: firstStage.id,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`🎉 Added ${lead.name} to pipeline stage "${firstStage.name}"!`);
+        },
+      }
+    );
   };
 
   const isLocked = lead.isLocked;
@@ -150,8 +185,15 @@ export function LeadCard({
               </motion.div>
 
               <motion.div {...tapProps}>
-                <Button size="sm" variant="secondary" className="h-7 px-2 text-xs gap-1">
-                  <Plus className="h-3.5 w-3.5" /> Pipeline
+                <Button
+                  size="sm"
+                  variant={lead.savedByMe ? "default" : "secondary"}
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={handleAddToPipeline}
+                  disabled={lead.savedByMe || moveMutation.isPending}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {lead.savedByMe ? "Added" : "Pipeline"}
                 </Button>
               </motion.div>
 

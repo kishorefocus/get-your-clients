@@ -20,6 +20,8 @@ export interface ClientResponse {
   distance_meters: number | null;
   tags?: { id: string; name: string }[];
   is_locked?: boolean;
+  is_claimed?: boolean;
+  stage?: string | null;
 }
 
 export interface ClientSearchRequest {

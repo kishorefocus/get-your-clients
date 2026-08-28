@@ -55,11 +55,12 @@ function clientToLead(c: ClientResponse): Lead {
     website: c.website ?? undefined,
     rating: c.rating ?? undefined,
     distanceKm: c.distance_meters != null ? c.distance_meters / 1000 : undefined,
-    stage: "new",
+    stage: c.stage ? (c.stage.toLowerCase() as PipelineStage) : "new",
     priority: "medium",
     tags: c.tags ? c.tags.map((t) => t.name) : [],
     industryId: c.industry_id ?? undefined,
     isLocked: c.is_locked ?? false,
+    savedByMe: c.is_claimed ?? false,
   };
 }
 

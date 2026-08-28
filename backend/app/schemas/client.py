@@ -64,6 +64,8 @@ class ClientResponse(BaseModel):
     distance_meters: float | None = None  # populated only by geo search
     tags: list[ClientTagResponse] = []
     is_locked: bool = False
+    is_claimed: bool = False
+    stage: str | None = None
 
     model_config = {"from_attributes": True}
 

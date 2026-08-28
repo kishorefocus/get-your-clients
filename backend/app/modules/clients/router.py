@@ -20,11 +20,17 @@ router = APIRouter(prefix="/api/v1/clients", tags=["clients"])
 
 
 def _to_response(
-    client, distance_meters: float | None = None, is_locked: bool = False
+    client,
+    distance_meters: float | None = None,
+    is_locked: bool = False,
+    is_claimed: bool = False,
+    stage: str | None = None,
 ) -> ClientResponse:
     resp = ClientResponse.model_validate(client)
     resp.distance_meters = distance_meters
     resp.is_locked = is_locked
+    resp.is_claimed = is_claimed
+    resp.stage = stage
     if is_locked:
         resp.phone = "Locked (Pro Feature)"
         resp.email = "Locked (Pro Feature)"
@@ -46,25 +52,28 @@ async def search_clients(
     )
 
     from app.models.organization import Organization
-    from app.models.pipeline import ClientPipelineState
+    from app.models.pipeline import ClientPipelineState, PipelineStage
     from sqlalchemy import select
 
     org = await db.get(Organization, current_user.org_id)
     is_free = (org.plan == "free") if org else True
 
-    # Query all pipeline states for this org to check claimed clients
-    claimed_stmt = select(ClientPipelineState.client_id).where(
-        ClientPipelineState.org_id == current_user.org_id
+    # Query all pipeline states and stage names for this org to check claimed clients
+    stmt = (
+        select(ClientPipelineState.client_id, PipelineStage.name)
+        .join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id)
+        .where(ClientPipelineState.org_id == current_user.org_id)
     )
-    claimed_ids_res = await db.scalars(claimed_stmt)
-    claimed_ids = set(claimed_ids_res.all())
+    res = await db.execute(stmt)
+    client_stages = {row[0]: row[1] for row in res.all()}
 
     results = []
     for idx, (c, d) in enumerate(zip(clients, distances)):
         is_global = c.org_id != current_user.org_id
-        is_claimed = c.id in claimed_ids
+        stage_name = client_stages.get(c.id)
+        is_claimed = c.id in client_stages
         c_locked = is_free and is_global and not is_claimed and idx >= 3
-        results.append(_to_response(c, d, is_locked=c_locked))
+        results.append(_to_response(c, d, is_locked=c_locked, is_claimed=is_claimed, stage=stage_name))
 
     return ClientSearchResponse(
         results=results,
@@ -81,7 +90,7 @@ async def get_client(
     client = await service.get_client(db, org_id=current_user.org_id, user_id=current_user.user_id, client_id=client_id)
 
     from app.models.organization import Organization
-    from app.models.pipeline import ClientPipelineState
+    from app.models.pipeline import ClientPipelineState, PipelineStage
     from sqlalchemy import select
 
     org = await db.get(Organization, current_user.org_id)
@@ -90,17 +99,20 @@ async def get_client(
     is_global = client.org_id != current_user.org_id
 
     # Check if claimed in pipeline
-    claimed = False
-    if is_global:
-        claimed_stmt = select(ClientPipelineState).where(
+    state_stmt = (
+        select(ClientPipelineState, PipelineStage.name)
+        .join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id)
+        .where(
             ClientPipelineState.org_id == current_user.org_id,
             ClientPipelineState.client_id == client.id
         )
-        res = await db.scalar(claimed_stmt)
-        claimed = res is not None
+    )
+    state_res = (await db.execute(state_stmt)).first()
+    claimed = state_res is not None
+    stage_name = state_res[1] if state_res else None
 
     c_locked = is_free and is_global and not claimed
-    return _to_response(client, is_locked=c_locked)
+    return _to_response(client, is_locked=c_locked, is_claimed=claimed, stage=stage_name)
 
 
 @router.post("", response_model=ClientResponse, status_code=201)

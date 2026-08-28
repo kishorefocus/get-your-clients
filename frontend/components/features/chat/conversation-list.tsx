@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { staggerContainerFast, staggerChild, tapProps } from "@/lib/motion";
 
 export function ConversationList() {
-  const { conversations, activeConversationId, searchQuery, setActiveConversation, setSearchQuery } = useChatStore();
+  const { conversations, isLoadingConversations, activeConversationId, searchQuery, setActiveConversation, setSearchQuery } = useChatStore();
 
   const filtered = conversations.filter((c) =>
     c.leadName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -41,7 +41,23 @@ export function ConversationList() {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {filtered.length === 0 ? (
+        {isLoadingConversations ? (
+          <div className="divide-y divide-border/30 p-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex gap-3 items-start animate-pulse p-3">
+                <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <div className="h-3 w-1/3 bg-muted rounded" />
+                    <div className="h-2 w-8 bg-muted rounded" />
+                  </div>
+                  <div className="h-3 w-2/3 bg-muted rounded" />
+                  <div className="h-4.5 w-12 bg-muted rounded-full mt-1" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <p className="px-4 py-8 text-center text-xs text-muted-foreground">No conversations found</p>
         ) : (
           <motion.div

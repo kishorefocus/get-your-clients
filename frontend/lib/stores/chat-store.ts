@@ -5,6 +5,7 @@ import { MessageResponse, listConversations } from "@/lib/api/chat";
 
 interface ChatStore {
   conversations: Conversation[];
+  isLoadingConversations: boolean;
   activeConversationId: string | null;
   searchQuery: string;
   /** threadId keyed by conversationId — set when WS connects. */
@@ -36,7 +37,8 @@ export function backendMsgToFrontend(conversationId: string, msg: MessageRespons
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
-  conversations: mockConversations,
+  conversations: [],
+  isLoadingConversations: true,
   activeConversationId: null,
   searchQuery: "",
   threadIds: {},
@@ -133,13 +135,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   fetchConversations: async () => {
+    set({ isLoadingConversations: true });
     try {
       const apiConversations = await listConversations();
       if (apiConversations && apiConversations.length > 0) {
-        set({ conversations: apiConversations });
+        set({ conversations: apiConversations, isLoadingConversations: false });
+      } else {
+        set({ conversations: mockConversations, isLoadingConversations: false });
       }
     } catch (err) {
-      // Keep existing conversations
+      set({ conversations: mockConversations, isLoadingConversations: false });
     }
   },
 

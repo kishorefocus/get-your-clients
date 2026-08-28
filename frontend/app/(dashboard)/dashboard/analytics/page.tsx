@@ -56,6 +56,63 @@ function AnalyticsKpiCard({ kpi }: { kpi: any }) {
   );
 }
 
+function AnalyticsSkeleton() {
+  return (
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* KPI grid skeleton */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-4 animate-pulse flex justify-between items-start">
+            <div className="space-y-2 flex-1">
+              <div className="h-3 w-2/3 bg-muted rounded" />
+              <div className="h-7 w-1/2 bg-muted rounded" />
+              <div className="h-3 w-3/4 bg-muted rounded" />
+            </div>
+            <div className="h-8 w-8 bg-muted rounded-lg shrink-0" />
+          </div>
+        ))}
+      </div>
+
+      {/* Row 1: Charts skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="h-72 rounded-xl border border-border bg-card p-5 animate-pulse flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="h-4 w-1/3 bg-muted rounded" />
+              <div className="h-3 w-1/4 bg-muted rounded" />
+            </div>
+            <div className="h-44 w-full bg-muted rounded-lg" />
+          </div>
+        ))}
+      </div>
+
+      {/* Row 2: country & leaderboard skeleton */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 h-72 rounded-xl border border-border bg-card p-5 animate-pulse flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="h-4 w-1/4 bg-muted rounded" />
+            <div className="h-3 w-1/3 bg-muted rounded" />
+          </div>
+          <div className="h-44 w-full bg-muted rounded-lg" />
+        </div>
+        <div className="h-72 rounded-xl border border-border bg-card p-5 animate-pulse flex flex-col gap-3">
+          <div className="h-4.5 w-1/2 bg-muted rounded" />
+          <hr className="border-border" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-muted shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-3.5 w-1/3 bg-muted rounded" />
+                <div className="h-2.5 w-1/2 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const { data: analyticsData, isLoading } = useDashboardAnalytics();
 
@@ -64,6 +121,22 @@ export default function AnalyticsPage() {
     ...k,
     icon: kpiIcons[k.label] || Globe2,
   }));
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Topbar
+          title="Analytics"
+          actions={
+            <Button variant="ghost" size="sm" className="gap-2 text-xs hover:bg-muted/80 focus-visible:outline-ring" disabled>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </Button>
+          }
+        />
+        <AnalyticsSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -77,22 +150,16 @@ export default function AnalyticsPage() {
       />
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin space-y-5">
         {/* KPI row */}
-        {isLoading ? (
-          <div className="flex h-16 items-center justify-center">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : (
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-          >
-            {kpisToRender.map((k) => (
-              <AnalyticsKpiCard key={k.label} kpi={k} />
-            ))}
-          </motion.div>
-        )}
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+        >
+          {kpisToRender.map((k) => (
+            <AnalyticsKpiCard key={k.label} kpi={k} />
+          ))}
+        </motion.div>
 
         {/* Charts row 1 */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
