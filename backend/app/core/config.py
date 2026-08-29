@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     stripe_publishable_key: str | None = None
     stripe_webhook_secret: str | None = None
 
+    paddle_api_key: str | None = None
+    paddle_webhook_secret: str | None = None
+    paddle_environment: str = "sandbox"
+
+
 
     rate_limit_per_minute_default: int = 120
 

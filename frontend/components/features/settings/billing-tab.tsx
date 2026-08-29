@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMyOrg } from "@/lib/hooks/use-org";
 import { useSubscribe, useCancelSubscription, useSubscriptionStatus } from "@/lib/hooks/use-subscription";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { initializePaddle } from "@paddle/paddle-js";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Check, Loader2, FileText, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerChild, cardHoverProps } from "@/lib/motion";
+import { toast } from "sonner";
+
+const PADDLE_PRICE_IDS: Record<string, { month: string; year: string }> = {
+  growth: {
+    month: "pri_01m15xs0trk9mmkrd5b7pfr5cw",
+    year: "pri_01m1676haan7wtzgnvbzv364yn",
+  },
+  pro: {
+    month: "pri_01m167efhpd1bhe9pfx24m8fcm",
+    year: "pri_01m167fp4ccv5svj2r01fnk7cr",
+  },
+  enterprise: {
+    month: "pri_01m167hq9j3kncjcs4nfwv86y8",
+    year: "pri_01m167kab9hhetzkwbd96jsj28",
+  },
+};
+
 
 const planList = [
   {
@@ -51,14 +70,35 @@ const invoices = [
 ];
 
 export function BillingTab() {
+  const { user } = useAuth();
   const { data: org, isLoading: isOrgLoading } = useMyOrg();
   const { data: subscription, isLoading: isSubLoading } = useSubscriptionStatus();
   const subscribeMutation = useSubscribe();
   const cancelMutation = useCancelSubscription();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
+  const [paddle, setPaddle] = useState<any>(null);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState<string | null>(null);
 
   const currentPlanKey = org?.plan || "free";
   const isLoading = isOrgLoading || isSubLoading;
+
+  useEffect(() => {
+    initializePaddle({
+      environment: (process.env.NEXT_PUBLIC_PADDLE_ENV as "sandbox" | "production") || "sandbox",
+      token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
+      eventCallback: (event) => {
+        if (event.name === "checkout.completed") {
+          const transactionId = event.data?.transaction_id;
+          const plan = (event.data?.custom_data as any)?.plan || "growth";
+          window.location.href = `/success?transaction_id=${transactionId}&plan=${plan}`;
+        }
+      }
+    }).then((paddleInstance) => {
+      if (paddleInstance) {
+        setPaddle(paddleInstance);
+      }
+    });
+  }, []);
 
   const handleAction = async (planKey: string) => {
     if (planKey === "free") {
@@ -66,7 +106,37 @@ export function BillingTab() {
         cancelMutation.mutate();
       }
     } else {
-      subscribeMutation.mutate({ plan: planKey, interval: billingInterval });
+      const priceId = PADDLE_PRICE_IDS[planKey]?.[billingInterval];
+      if (!priceId) {
+        toast.error("Invalid plan or billing interval.");
+        return;
+      }
+      if (!paddle) {
+        toast.error("Paddle is not ready yet. Please try again in a moment.");
+        return;
+      }
+      try {
+        setIsCheckoutLoading(planKey);
+        localStorage.setItem("pending_plan", planKey);
+        paddle.Checkout.open({
+          items: [
+            {
+              priceId: priceId,
+              quantity: 1,
+            },
+          ],
+          customer: user?.email ? { email: user.email } : undefined,
+          customData: {
+            org_id: user?.org_id || "",
+            user_id: user?.id || "",
+            plan: planKey,
+          },
+        });
+      } catch (err: any) {
+        toast.error(err.message || "Failed to open checkout overlay.");
+      } finally {
+        setIsCheckoutLoading(null);
+      }
     }
   };
 
@@ -167,9 +237,7 @@ export function BillingTab() {
               currentPlanKey === plan.key &&
               (plan.key === "free" ||
                 (subscription?.billing_interval || "month") === billingInterval);
-            const isUpgrading =
-              subscribeMutation.isPending &&
-              subscribeMutation.variables?.plan === plan.key;
+            const isUpgrading = isCheckoutLoading === plan.key;
             const isCancelling = cancelMutation.isPending && plan.key === "free";
 
             const activePrice = billingInterval === "month" ? plan.monthlyPrice : plan.yearlyPrice;
@@ -237,7 +305,7 @@ export function BillingTab() {
                       variant={plan.popular ? "default" : "outline"}
                       className="w-full text-xs font-semibold"
                       onClick={() => handleAction(plan.key)}
-                      disabled={subscribeMutation.isPending || cancelMutation.isPending}
+                      disabled={!!isCheckoutLoading || cancelMutation.isPending}
                     >
                       {isUpgrading ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -253,7 +321,7 @@ export function BillingTab() {
                         variant="ghost"
                         className="w-full text-xs text-danger hover:bg-danger/10"
                         onClick={() => handleAction("free")}
-                        disabled={subscribeMutation.isPending || cancelMutation.isPending}
+                        disabled={!!isCheckoutLoading || cancelMutation.isPending}
                       >
                         {isCancelling ? (
                           <Loader2 className="h-3 w-3 animate-spin text-danger" />

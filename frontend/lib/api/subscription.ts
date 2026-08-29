@@ -28,9 +28,13 @@ export async function cancelSubscription(): Promise<SubscriptionResponse> {
   });
 }
 
-export async function confirmPayment(sessionId: string): Promise<{ status: string; plan: string }> {
-  return apiFetch<{ status: string; plan: string }>(`/api/v1/subscriptions/confirm-payment?session_id=${sessionId}`, {
+export async function confirmPayment(transactionId: string, plan?: string): Promise<{ status: string; plan: string }> {
+  const url = plan 
+    ? `/api/v1/subscriptions/confirm-payment?transaction_id=${transactionId}&plan=${plan}`
+    : `/api/v1/subscriptions/confirm-payment?transaction_id=${transactionId}`;
+  return apiFetch<{ status: string; plan: string }>(url, {
     method: "POST",
   });
 }
+
 

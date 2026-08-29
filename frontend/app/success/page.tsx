@@ -14,7 +14,7 @@ import { confirmPayment } from "@/lib/api/subscription";
 function SuccessPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
+  const transactionId = searchParams.get("transaction_id") || searchParams.get("_ptxn");
   
   const [status, setStatus] = useState<"confirming" | "success" | "error">("confirming");
   const [errorMessage, setErrorMessage] = useState("");
@@ -22,21 +22,29 @@ function SuccessPageContent() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!sessionId) {
+    const params = new URLSearchParams(window.location.search);
+    const txId = params.get("transaction_id") || params.get("_ptxn");
+
+    const plan = params.get("plan") || (typeof window !== "undefined" ? localStorage.getItem("pending_plan") : null) || undefined;
+
+    if (!txId) {
       setStatus("error");
-      setErrorMessage("Missing Stripe checkout session ID.");
+      setErrorMessage("Missing Paddle checkout transaction ID.");
       return;
     }
-    const activeSessionId = sessionId as string;
+    const activeTransactionId = txId;
 
     let isMounted = true;
 
     async function verify() {
       try {
-        await confirmPayment(activeSessionId);
+        await confirmPayment(activeTransactionId, plan);
         
         if (isMounted) {
           setStatus("success");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("pending_plan");
+          }
           // Invalidate cache immediately so settings page gets fresh plan info
           qc.invalidateQueries({ queryKey: SUB_KEYS.status });
           qc.invalidateQueries({ queryKey: ORG_KEYS.me });
@@ -54,7 +62,7 @@ function SuccessPageContent() {
     return () => {
       isMounted = false;
     };
-  }, [sessionId, qc]);
+  }, [qc]);
 
   // Countdown timer for redirection on success
   useEffect(() => {
@@ -82,7 +90,7 @@ function SuccessPageContent() {
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <h1 className="font-display text-2xl font-bold text-foreground">Confirming Payment...</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Please wait while we secure your subscription with Stripe.
+              Please wait while we secure your subscription with Paddle.
             </p>
           </div>
         )}
