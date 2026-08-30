@@ -25,6 +25,20 @@ import {
   EASE_OUT,
 } from "@/lib/motion";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import dynamic from "next/dynamic";
+import { mockLeads } from "@/lib/mock/leads";
+
+const InteractiveMap = dynamic(
+  () => import("@/components/features/search/interactive-map").then((mod) => mod.InteractiveMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-[hsl(224,33%,7%)] animate-pulse">
+        <span className="text-xs text-muted-foreground/75 font-mono tracking-wider">INITIATING MAP ENGINE...</span>
+      </div>
+    ),
+  }
+);
 
 /* ─── Data ────────────────────────────────────────────────────────────────── */
 
@@ -373,7 +387,6 @@ export default function LandingPage() {
             { label: "Product", href: "#product" },
             { label: "How It Works", href: "#how-it-works" },
             { label: "Industries", href: "#industries" },
-            { label: "Pricing", href: "#pricing" },
           ].map((item) => (
             <motion.a
               key={item.label}
@@ -484,79 +497,14 @@ export default function LandingPage() {
                 <span className="h-2.5 w-2.5 rounded-full bg-danger/60" />
                 <span className="h-2.5 w-2.5 rounded-full bg-accent/60" />
                 <span className="h-2.5 w-2.5 rounded-full bg-success/60" />
-                <span className="ml-2 font-mono text-[11px] text-muted-foreground">globalreach — 12 leads plotted</span>
+                <span className="ml-2 font-mono text-[11px] text-muted-foreground">realtime_stream — active coordinates</span>
               </div>
-              <div className="mt-3 h-80 rounded-xl bg-[hsl(224,33%,7%)] p-4 overflow-hidden relative">
-                <svg viewBox="0 0 440 270" className="h-full w-full">
-                  <defs>
-                    <pattern id="hero-grid" width="22" height="22" patternUnits="userSpaceOnUse">
-                      <path d="M22 0 L0 0 0 22" fill="none" stroke="hsl(220,20%,18%)" strokeWidth="0.5" />
-                    </pattern>
-                    <radialGradient id="glow-blue" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="hsl(228,100%,64%)" stopOpacity="0.6" />
-                      <stop offset="100%" stopColor="hsl(228,100%,64%)" stopOpacity="0" />
-                    </radialGradient>
-                    <radialGradient id="glow-amber" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="hsl(37,90%,60%)" stopOpacity="0.5" />
-                      <stop offset="100%" stopColor="hsl(37,90%,60%)" stopOpacity="0" />
-                    </radialGradient>
-                  </defs>
-                  <rect width="440" height="270" fill="url(#hero-grid)" />
-
-                  {/* Continent silhouettes */}
-                  <g opacity="0.08" fill="hsl(220,30%,60%)">
-                    <path d="M30 80 Q60 60 100 70 Q140 60 170 80 Q190 95 180 120 Q160 140 130 130 Q90 140 60 120 Q30 110 30 80Z" />
-                    <path d="M190 40 Q250 30 310 50 Q360 60 390 100 Q400 130 380 160 Q350 180 300 175 Q250 180 220 160 Q190 140 180 110 Q170 80 190 40Z" />
-                    <path d="M200 185 Q240 175 270 190 Q290 205 280 230 Q260 250 230 245 Q200 240 195 215 Q190 200 200 185Z" />
-                    <path d="M310 175 Q340 165 370 180 Q390 200 385 225 Q370 240 345 235 Q320 230 310 210 Q300 190 310 175Z" />
-                  </g>
-
-                  {/* Connection lines */}
-                  <g stroke="hsl(228,100%,64%)" strokeWidth="0.6" strokeOpacity="0.3" strokeDasharray="4 3" fill="none">
-                    <line x1="270" y1="90" x2="85" y2="95" />
-                    <line x1="270" y1="90" x2="165" y2="145" />
-                    <line x1="270" y1="90" x2="330" y2="155" />
-                    <line x1="270" y1="90" x2="340" y2="60" />
-                  </g>
-
-                  {/* Pins */}
-                  <motion.g style={{ y: prefersReduced ? 0 : pinY }}>
-                    {[
-                      { x: 85, y: 95, size: 5, color: "hsl(228,100%,64%)", ring: false },
-                      { x: 165, y: 145, size: 5, color: "hsl(228,100%,64%)", ring: false },
-                      { x: 270, y: 90, size: 9, color: "hsl(37,90%,60%)", ring: true },
-                      { x: 330, y: 155, size: 5, color: "hsl(228,100%,64%)", ring: false },
-                      { x: 340, y: 60, size: 5, color: "hsl(160,62%,42%)", ring: false },
-                      { x: 120, y: 175, size: 5, color: "hsl(228,100%,64%)", ring: false },
-                      { x: 220, y: 200, size: 5, color: "hsl(37,90%,60%)", ring: false },
-                      { x: 390, y: 120, size: 5, color: "hsl(160,62%,42%)", ring: false },
-                    ].map(({ x, y, size, color, ring }, i) => (
-                      <motion.g
-                        key={i}
-                        transform={`translate(${x} ${y})`}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 280, damping: 20 }}
-                        whileHover={{ scale: 1.5 }}
-                      >
-                        {ring && (
-                          <>
-                            <motion.circle r={size + 8} fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.2"
-                              animate={{ r: [size + 8, size + 16], opacity: [0.3, 0] }}
-                              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                            />
-                            <circle r={size + 4} fill={`url(#glow-amber)`} opacity="0.6" />
-                          </>
-                        )}
-                        <circle r={size} fill={color} stroke="white" strokeWidth="1.5" />
-                      </motion.g>
-                    ))}
-                  </motion.g>
-                </svg>
+              <div className="mt-3 h-80 rounded-xl overflow-hidden relative z-0">
+                <InteractiveMap leads={mockLeads} />
 
                 {/* Overlay lead card */}
                 <motion.div
-                  className="absolute bottom-3 left-3 right-3 rounded-lg border border-border/60 bg-card/90 backdrop-blur-sm px-3 py-2.5 flex items-center gap-2.5"
+                  className="absolute bottom-3 left-3 right-3 rounded-lg border border-border/60 bg-card/90 backdrop-blur-sm px-3 py-2.5 flex items-center gap-2.5 z-[500]"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.2, duration: 0.3, ease: EASE_OUT }}
@@ -917,75 +865,6 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ══════════════════ PRICING ══════════════════ */}
-      <section id="pricing" className="border-t border-border bg-surface py-24">
-        <div className="mx-auto max-w-7xl px-6">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: EASE_OUT }}
-            viewport={{ once: true }}
-          >
-            <span className="manifest-chip">PRICING</span>
-            <h2 className="mt-4 font-display text-4xl font-bold tracking-tight">
-              Priced per rep,{" "}
-              <span className="gradient-text">not per lead.</span>
-            </h2>
-            <p className="mt-3 text-base text-muted-foreground max-w-md mx-auto">
-              Start with a 14-day free trial. No credit card required. Cancel anytime.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3"
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-          >
-            {tiers.map((t) => (
-              <motion.div
-                key={t.name}
-                variants={fadeUp}
-                whileHover={t.featured ? { y: -6, scale: 1.01 } : { y: -3 }}
-                transition={{ duration: 0.22, ease: EASE_OUT }}
-                className={cn(
-                  "rounded-xl border p-7 transition-shadow",
-                  t.featured
-                    ? "border-primary bg-card shadow-[0_0_0_1px_hsl(228,100%,64%,0.25),0_0_40px_-8px_hsl(228,100%,64%,0.3)]"
-                    : "border-border bg-card shadow-subtle hover:shadow-card"
-                )}
-              >
-                {t.featured && (
-                  <span className="mb-4 inline-block rounded-full bg-primary/10 px-3 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary">
-                    Most popular
-                  </span>
-                )}
-                <p className="text-sm font-bold">{t.name}</p>
-                <p className="mt-2 font-display text-4xl font-bold">
-                  {t.price}
-                  <span className="text-sm font-normal text-muted-foreground">{t.period}</span>
-                </p>
-                <ul className="mt-6 space-y-3">
-                  {t.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-success shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/login">
-                  <motion.div className="mt-7" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button className="w-full" variant={t.featured ? "default" : "outline"}>
-                      {t.name === "Enterprise" ? "Talk to sales" : "Start free trial"}
-                    </Button>
-                  </motion.div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
       {/* ══════════════════ FINAL CTA BANNER ══════════════════ */}
       <section className="px-6 py-6">
@@ -1064,7 +943,7 @@ export default function LandingPage() {
               <div>
                 <p className="font-semibold mb-3">Product</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  {["Features", "Pricing", "Changelog", "Roadmap"].map((l) => (
+                  {["Features", "Changelog", "Roadmap"].map((l) => (
                     <li key={l}><a href="#" className="hover:text-foreground transition-colors">{l}</a></li>
                   ))}
                 </ul>

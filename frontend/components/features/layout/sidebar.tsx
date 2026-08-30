@@ -32,7 +32,7 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hoveredTooltip, setHoveredTooltip] = useState<{ label: string; top: number } | null>(null);
 
@@ -46,18 +46,8 @@ export function Sidebar() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Load from local storage on client side
-  useEffect(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
-    if (stored === "true") {
-      setIsCollapsed(true);
-    }
-  }, []);
-
   const handleToggle = () => {
-    const next = !isCollapsed;
-    setIsCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", String(next));
+    setIsCollapsed((prev) => !prev);
   };
 
   return (
@@ -66,29 +56,17 @@ export function Sidebar() {
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       onAnimationStart={() => setIsAnimating(true)}
       onAnimationComplete={() => setIsAnimating(false)}
+      onMouseEnter={() => setIsCollapsed(false)}
+      onMouseLeave={() => setIsCollapsed(true)}
       className={cn(
         "relative hidden shrink-0 flex-col border-r border-[#20328c]/30 bg-gradient-to-b from-[#172774] via-[#0c1448] to-[#1a4da6] text-slate-200 md:flex h-full shadow-[inset_-1px_0_0_0_rgba(255,255,255,0.03),4px_0_24px_rgba(0,0,0,0.15)]",
         isAnimating ? "overflow-hidden" : "overflow-visible"
       )}
     >
-      {/* Floating Collapse Button */}
-      <motion.button
-        onClick={handleToggle}
-        initial={false}
-        animate={{ 
-          rotate: isCollapsed ? 180 : 0,
-        }}
-        whileHover={{ scale: 1.1, backgroundColor: "#203075" }}
-        whileTap={{ scale: 0.9 }}
-        className="absolute top-4 -right-3 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-blue-600/40 bg-[#162263] text-slate-300 hover:text-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.4)] cursor-pointer focus:outline-none"
-        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-      </motion.button>
 
       {/* Logo Area */}
       <div className={cn(
-        "flex h-14 items-center border-b border-[#20328c]/30 px-4", 
+        "flex h-14 items-center border-b border-[#20328c]/30 px-4",
         isCollapsed ? "justify-center px-2" : "justify-between"
       )}>
         <div className="flex items-center gap-2.5 min-w-0">
@@ -102,9 +80,9 @@ export function Sidebar() {
           >
             <Globe2 className="h-4 w-4" />
           </motion.div>
-          
+
           <motion.span
-            animate={{ 
+            animate={{
               opacity: isCollapsed ? 0 : 1,
               width: isCollapsed ? 0 : "auto",
               x: isCollapsed ? -10 : 0
@@ -118,7 +96,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav 
+      <nav
         onScroll={() => setHoveredTooltip(null)}
         className="flex-1 space-y-0.5 overflow-y-auto p-3 scrollbar-thin"
       >
@@ -177,12 +155,12 @@ export function Sidebar() {
               )}>
                 <Icon className={cn(
                   "h-4 w-4 shrink-0 transition-all duration-200",
-                  active 
-                    ? "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.65)]" 
+                  active
+                    ? "text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.65)]"
                     : "text-slate-400 group-hover:text-slate-100 group-hover:scale-110"
                 )} />
                 <motion.span
-                  animate={{ 
+                  animate={{
                     opacity: isCollapsed ? 0 : 1,
                     width: isCollapsed ? 0 : "auto",
                     x: isCollapsed ? -10 : 0

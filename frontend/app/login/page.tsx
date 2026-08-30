@@ -14,6 +14,20 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { ApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import { mockLeads } from "@/lib/mock/leads";
+
+const InteractiveMap = dynamic(
+  () => import("@/components/features/search/interactive-map").then((mod) => mod.InteractiveMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-[hsl(224,33%,7%)] animate-pulse">
+        <span className="text-xs text-muted-foreground/75 font-mono tracking-wider">INITIATING MAP ENGINE...</span>
+      </div>
+    ),
+  }
+);
 
 /* ─── Simulated Outreach Deals ────────────────────────────────────────────── */
 const chatDeals = [
@@ -404,88 +418,11 @@ export default function LoginPage() {
               <span className="h-2 w-2 rounded-full bg-danger/70 animate-pulse" />
               <span className="h-2 w-2 rounded-full bg-accent/70" />
               <span className="h-2 w-2 rounded-full bg-success/70" />
-              <span className="ml-2 font-mono text-[10px] text-slate-400">realtime_stream — active coordinates</span>
+              <span className="ml-2 font-mono text-[10px] text-slate-400">globalreach — 12 leads plotted</span>
             </div>
-            
-            <div className="mt-3 flex-1 bg-slate-950/40 rounded-xl overflow-hidden relative flex items-center justify-center p-2">
-              <svg viewBox="0 0 440 270" className="h-full w-full opacity-90">
-                <defs>
-                  <pattern id="login-grid" width="22" height="22" patternUnits="userSpaceOnUse">
-                    <path d="M22 0 L0 0 0 22" fill="none" stroke="hsl(220,20%,18%)" strokeWidth="0.5" />
-                  </pattern>
-                  <radialGradient id="login-glow-blue" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="hsl(228,100%,64%)" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="hsl(228,100%,64%)" stopOpacity="0" />
-                  </radialGradient>
-                  <radialGradient id="login-glow-amber" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="hsl(37,90%,60%)" stopOpacity="0.5" />
-                    <stop offset="100%" stopColor="hsl(37,90%,60%)" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-                <rect width="440" height="270" fill="url(#login-grid)" />
 
-                {/* Continent silhouettes */}
-                <g opacity="0.08" fill="hsl(220,30%,60%)">
-                  <path d="M30 80 Q60 60 100 70 Q140 60 170 80 Q190 95 180 120 Q160 140 130 130 Q90 140 60 120 Q30 110 30 80Z" />
-                  <path d="M190 40 Q250 30 310 50 Q360 60 390 100 Q400 130 380 160 Q350 180 300 175 Q250 180 220 160 Q190 140 180 110 Q170 80 190 40Z" />
-                  <path d="M200 185 Q240 175 270 190 Q290 205 280 230 Q260 250 230 245 Q200 240 195 215 Q190 200 200 185Z" />
-                  <path d="M310 175 Q340 165 370 180 Q390 200 385 225 Q370 240 345 235 Q320 230 310 210 Q300 190 310 175Z" />
-                </g>
-
-                {/* Connection lines */}
-                <g stroke="hsl(228,100%,64%)" strokeWidth="0.6" strokeOpacity="0.3" strokeDasharray="4 3" fill="none">
-                  <line x1="270" y1="90" x2="85" y2="95" />
-                  <line x1="270" y1="90" x2="165" y2="145" />
-                  <line x1="270" y1="90" x2="330" y2="155" />
-                  <line x1="270" y1="90" x2="340" y2="60" />
-                </g>
-
-                {/* Floating Pins */}
-                <g>
-                  {[
-                    { x: 85, y: 95, size: 4, color: "hsl(228,100%,64%)", ring: false },
-                    { x: 165, y: 145, size: 4, color: "hsl(228,100%,64%)", ring: false },
-                    { x: 270, y: 90, size: 7, color: "hsl(37,90%,60%)", ring: true },
-                    { x: 330, y: 155, size: 4, color: "hsl(228,100%,64%)", ring: false },
-                    { x: 340, y: 60, size: 4, color: "hsl(160,62%,42%)", ring: false },
-                    { x: 120, y: 175, size: 4, color: "hsl(228,100%,64%)", ring: false },
-                    { x: 220, y: 200, size: 4, color: "hsl(37,90%,60%)", ring: false },
-                    { x: 390, y: 120, size: 4, color: "hsl(160,62%,42%)", ring: false },
-                  ].map(({ x, y, size, color, ring }, i) => (
-                    <motion.g
-                      key={i}
-                      transform={`translate(${x} ${y})`}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{
-                        scale: 1,
-                        opacity: 1,
-                        y: prefersReduced ? 0 : [0, -4, 0],
-                      }}
-                      transition={{
-                        scale: { delay: i * 0.08, type: "spring", stiffness: 280, damping: 20 },
-                        opacity: { delay: i * 0.08 },
-                        y: {
-                          duration: 4 + (i % 3) * 1.5,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                          delay: i * 0.2
-                        }
-                      }}
-                    >
-                      {ring && (
-                        <>
-                          <motion.circle r={size + 6} fill="none" stroke={color} strokeWidth="1" strokeOpacity="0.2"
-                            animate={{ r: [size + 6, size + 12], opacity: [0.3, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                          />
-                          <circle r={size + 3} fill={`url(#login-glow-amber)`} opacity="0.6" />
-                        </>
-                      )}
-                      <circle r={size} fill={color} stroke="white" strokeWidth="1" />
-                    </motion.g>
-                  ))}
-                </g>
-              </svg>
+            <div className="mt-3 flex-1 bg-slate-950/40 rounded-xl overflow-hidden relative z-0">
+              <InteractiveMap leads={mockLeads} />
             </div>
           </div>
 
