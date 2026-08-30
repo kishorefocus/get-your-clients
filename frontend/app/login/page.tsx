@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Globe2, CheckCircle2, Shield, Building2
+  Globe2, CheckCircle2, Shield, Building2, Eye, EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,7 +156,8 @@ export default function LoginPage() {
 
   const [state, setState] = useState<"idle" | "loading" | "error" | "success">("idle");
   const [errorMsg, setErrorMsg] = useState("Invalid email or password. Please try again.");
-  const [shakeKey, setShakeKey] = useState(0);
+  const [shake, setShake] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [activeDeal, setActiveDeal] = useState(0);
 
   // Auto-rotate deal cards
@@ -176,7 +177,7 @@ export default function LoginPage() {
     if (!email || !pw || pw.length < 4) {
       setErrorMsg("Please enter your email and password.");
       setState("error");
-      setShakeKey((k) => k + 1);
+      setShake(true);
       return;
     }
 
@@ -194,7 +195,7 @@ export default function LoginPage() {
       }
       setErrorMsg(msg);
       setState("error");
-      setShakeKey((k) => k + 1);
+      setShake(true);
       toast.error(msg);
     }
   };
@@ -283,14 +284,14 @@ export default function LoginPage() {
                   </motion.div>
 
                   <motion.form
-                    key={shakeKey}
                     className="mt-6 space-y-4"
                     onSubmit={handleSubmit}
                     animate={
-                      state === "error" && !prefersReduced
+                      shake && !prefersReduced
                         ? { x: [0, -7, 7, -5, 5, -3, 3, 0] }
                         : { x: 0 }
                     }
+                    onAnimationComplete={() => setShake(false)}
                     transition={{ duration: 0.4, ease: "easeOut" }}
                   >
                     <motion.div variants={staggerChild}>
@@ -322,14 +323,32 @@ export default function LoginPage() {
                           Forgot?
                         </Link>
                       </div>
-                      <Input
-                        id={passwordId}
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        disabled={state === "loading"}
-                        className={state === "error" ? "border-danger/60 focus-visible:ring-danger/30" : ""}
-                      />
+                      <div className="relative">
+                        <Input
+                          id={passwordId}
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          disabled={state === "loading"}
+                          className={cn(
+                            "pr-10",
+                            state === "error" ? "border-danger/60 focus-visible:ring-danger/30" : ""
+                          )}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none transition-colors"
+                          disabled={state === "loading"}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </motion.div>
 
                     <AnimatePresence>

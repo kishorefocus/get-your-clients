@@ -513,10 +513,10 @@ export default function LandingPage() {
                     <Building2 className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold truncate">NovaTech Systems · 🇮🇳 Mumbai</p>
-                    <p className="text-[10px] text-muted-foreground">SaaS · 250-500 employees · $12M ARR</p>
+                    <p className="text-xs font-semibold truncate">Find your dream clients</p>
+                    <p className="text-[10px] text-muted-foreground">Any country. Any industry. Any size.</p>
                   </div>
-                  <span className="shrink-0 deal-badge text-[10px]">Hot lead</span>
+                  <span className="shrink-0 deal-badge text-[10px]">GlobalReach</span>
                 </motion.div>
               </div>
             </div>
