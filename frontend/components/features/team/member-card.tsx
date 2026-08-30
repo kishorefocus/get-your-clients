@@ -30,12 +30,16 @@ interface Props {
 export function MemberCard({ member, index }: Props) {
   const colorCls = avatarColors[index % avatarColors.length];
   const role = roleMeta[member.role];
+  const isInvited = member.status === "invited";
 
   return (
     <motion.div
       variants={staggerChild}
       {...cardHoverProps}
-      className="group flex flex-col rounded-xl border border-border bg-card p-5 shadow-subtle hover:shadow-card transition-shadow"
+      className={cn(
+        "group flex flex-col rounded-xl border bg-card p-5 shadow-subtle hover:shadow-card transition-shadow",
+        isInvited ? "border-dashed border-accent/40 bg-accent/5" : "border-border"
+      )}
     >
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -47,15 +51,15 @@ export function MemberCard({ member, index }: Props) {
               </AvatarFallback>
             </Avatar>
             {/* Online dot pulsing */}
-            {member.online ? (
+            {!isInvited && member.online ? (
               <motion.span
                 animate={{ scale: [1, 1.25, 1], opacity: [1, 0.6, 1] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-success"
               />
-            ) : (
+            ) : !isInvited ? (
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-muted-foreground/30" />
-            )}
+            ) : null}
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-sm truncate">{member.name}</p>
@@ -63,6 +67,7 @@ export function MemberCard({ member, index }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isInvited && <Badge variant="accent">Pending</Badge>}
           <Badge variant={role.variant}>{role.label}</Badge>
           <motion.div {...tapProps}>
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100">
@@ -78,20 +83,20 @@ export function MemberCard({ member, index }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 text-center">
         <div>
-          <p className="font-display text-lg font-semibold">{member.assignedLeads ?? 0}</p>
+          <p className="font-display text-lg font-semibold">{isInvited ? "—" : (member.assignedLeads ?? 0)}</p>
           <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
             <Users className="h-3 w-3" /> Leads
           </p>
         </div>
         <div>
-          <p className="font-display text-lg font-semibold">{member.dealsWon ?? 0}</p>
+          <p className="font-display text-lg font-semibold">{isInvited ? "—" : (member.dealsWon ?? 0)}</p>
           <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
             <Trophy className="h-3 w-3" /> Won
           </p>
         </div>
         <div>
-          <p className={cn("font-display text-lg font-semibold", member.online ? "text-success" : "text-muted-foreground")}>
-            {member.online ? "Online" : "Away"}
+          <p className={cn("font-display text-lg font-semibold", isInvited ? "text-accent" : member.online ? "text-success" : "text-muted-foreground")}>
+            {isInvited ? "Invited" : member.online ? "Online" : "Away"}
           </p>
           <p className="text-[10px] text-muted-foreground font-mono">STATUS</p>
         </div>
@@ -99,16 +104,24 @@ export function MemberCard({ member, index }: Props) {
 
       {/* Footer */}
       <div className="mt-4 flex gap-2">
-        <motion.div {...tapProps} className="flex-1">
-          <Button variant="ghost" size="sm" className="w-full gap-1.5 text-xs h-8">
-            <Mail className="h-3.5 w-3.5" /> Message
-          </Button>
-        </motion.div>
-        <motion.div {...tapProps} className="flex-1">
-          <Button variant="ghost" size="sm" className="w-full text-xs h-8">
-            View leads
-          </Button>
-        </motion.div>
+        {isInvited ? (
+          <div className="w-full text-center py-2 text-xs text-muted-foreground border border-dashed rounded-lg bg-muted/20">
+            Waiting for teammate to onboard
+          </div>
+        ) : (
+          <>
+            <motion.div {...tapProps} className="flex-1">
+              <Button variant="ghost" size="sm" className="w-full gap-1.5 text-xs h-8">
+                <Mail className="h-3.5 w-3.5" /> Message
+              </Button>
+            </motion.div>
+            <motion.div {...tapProps} className="flex-1">
+              <Button variant="ghost" size="sm" className="w-full text-xs h-8">
+                View leads
+              </Button>
+            </motion.div>
+          </>
+        )}
       </div>
     </motion.div>
   );

@@ -12,6 +12,7 @@ from app.models.saved_search import SavedSearch
 from app.models.subscription import Subscription
 from app.models.tag import Tag, client_tags
 from app.models.user import User
+from app.models.invitation import Invitation
 
 __all__ = [
     "Organization",
@@ -30,4 +31,5 @@ __all__ = [
     "Reminder",
     "AuditLog",
     "Subscription",
+    "Invitation",
 ]

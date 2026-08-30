@@ -20,7 +20,8 @@ function adaptMember(m: {
   full_name: string | null;
   role: string;
   is_active: boolean;
-}): TeamMember {
+  status?: string;
+}): TeamMember & { status?: string } {
   const roleMap: Record<string, TeamMember["role"]> = {
     admin: "Admin",
     manager: "Manager",
@@ -32,6 +33,7 @@ function adaptMember(m: {
     role: roleMap[m.role] ?? "Rep",
     email: m.email,
     online: m.is_active,
+    status: m.status,
   };
 }
 
@@ -40,7 +42,7 @@ export default function TeamPage() {
   const { data: apiMembers, isLoading } = useOrgMembers();
 
   // Use real API members when available, fall back to mock data
-  const team: TeamMember[] =
+  const team: (TeamMember & { status?: string })[] =
     apiMembers && apiMembers.length > 0 ? apiMembers.map(adaptMember) : mockTeam;
 
   const roleCounts = team.reduce(

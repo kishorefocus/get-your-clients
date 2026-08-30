@@ -55,3 +55,33 @@ export async function me(): Promise<UserResponse> {
 export function logout() {
   clearTokens();
 }
+
+export interface VerifyInvitationResponse {
+  email: string;
+  org_name: string;
+  full_name: string | null;
+  role: string;
+}
+
+export interface AcceptInvitationRequest {
+  token: string;
+  password: string;
+  full_name?: string;
+}
+
+export async function verifyInviteToken(token: string): Promise<VerifyInvitationResponse> {
+  return apiFetch<VerifyInvitationResponse>(
+    `/api/v1/auth/invite/verify?token=${encodeURIComponent(token)}`,
+    { skipAuth: true }
+  );
+}
+
+export async function acceptInvite(payload: AcceptInvitationRequest): Promise<TokenPair> {
+  const data = await apiFetch<TokenPair>("/api/v1/auth/invite/accept", {
+    method: "POST",
+    body: payload,
+    skipAuth: true,
+  });
+  setTokens(data.access_token, data.refresh_token);
+  return data;
+}

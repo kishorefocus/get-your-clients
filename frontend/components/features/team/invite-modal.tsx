@@ -15,6 +15,8 @@ import { Send, UserPlus, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn, springUI, tapProps } from "@/lib/motion";
+import { useInviteMember } from "@/lib/hooks/use-org";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -26,26 +28,42 @@ export function InviteModal({ open, onClose }: Props) {
   const [role, setRole] = useState<"Admin" | "Manager" | "Rep">("Rep");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState("");
+
+  const inviteMemberMutation = useInviteMember();
 
   const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSend = async () => {
     if (!isValid) return;
     setLoading(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setEmail("");
-      setRole("Rep");
-      onClose();
-    }, 1800);
+    try {
+      const response = await inviteMemberMutation.mutateAsync({
+        email,
+        role: role.toLowerCase() as "admin" | "manager" | "rep",
+      });
+      if (response && response.token) {
+        const url = `${window.location.origin}/onboard?token=${response.token}`;
+        setInviteUrl(url);
+      }
+      setSent(true);
+    } catch (err) {
+      // errors handled by mutation toast
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSent(false);
+    setEmail("");
+    setRole("Rep");
+    setInviteUrl("");
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-md overflow-hidden">
         <DialogHeader>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 mb-2">
@@ -76,9 +94,35 @@ export function InviteModal({ open, onClose }: Props) {
                 <CheckCircle2 className="h-6 w-6 text-success" />
               </motion.div>
               <p className="font-semibold">Invite sent!</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-2">
                 An invitation has been sent to <span className="font-mono text-foreground">{email}</span>
               </p>
+
+              {inviteUrl && (
+                <div className="w-full text-left bg-muted/30 border border-border/80 rounded-xl p-3 mt-2 animate-fade-up">
+                  <label className="text-[10px] font-bold text-muted-foreground block mb-1 uppercase tracking-wider">
+                    Onboarding Link (for testing):
+                  </label>
+                  <div className="flex gap-2 items-center bg-card border rounded-lg p-2 text-xs font-mono select-all break-all">
+                    <span className="flex-1 overflow-hidden truncate text-foreground">{inviteUrl}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[10px] shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inviteUrl);
+                        toast.success("Link copied to clipboard!");
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 w-full flex justify-end">
+                <Button onClick={handleClose} className="w-full sm:w-auto">Done</Button>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -125,7 +169,7 @@ export function InviteModal({ open, onClose }: Props) {
 
         {!sent && (
           <DialogFooter>
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button variant="ghost" onClick={handleClose}>Cancel</Button>
             <motion.div {...tapProps}>
               <Button onClick={handleSend} disabled={!isValid || loading} className="gap-2 min-w-[100px]">
                 {loading ? (

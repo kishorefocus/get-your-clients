@@ -15,6 +15,8 @@ export interface OrgMember {
   full_name: string | null;
   role: string;
   is_active: boolean;
+  status?: string;
+  token?: string;
 }
 
 export interface InviteUserRequest {

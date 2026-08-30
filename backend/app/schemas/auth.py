@@ -37,3 +37,17 @@ class UserResponse(BaseModel):
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class VerifyInvitationResponse(BaseModel):
+    email: EmailStr
+    org_name: str
+    full_name: str | None
+    role: str
+
+
+class AcceptInvitationRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=8, max_length=255)
+    full_name: str | None = None
+
