@@ -1,7 +1,7 @@
 import uuid
 import random
 from datetime import datetime, timezone
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.client import Client
@@ -233,43 +233,57 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
     # 2. Weekly Performance (last 12 weeks)
     from datetime import datetime, timedelta, timezone
     now = datetime.now(timezone.utc)
-    weekly_perf = []
     
-    for i in range(11, -1, -1):
-        start_date = now - timedelta(weeks=i+1)
-        end_date = now - timedelta(weeks=i)
+    # Generate the 12 weeks from oldest to newest
+    week_ranges = []
+    for w_idx in range(11, -1, -1):
+        start_date = now - timedelta(weeks=w_idx+1)
+        end_date = now - timedelta(weeks=w_idx)
         week_label = f"W{start_date.isocalendar()[1]}"
+        week_ranges.append((week_label, start_date, end_date))
         
-        # Count outreach in range
-        outreach_stmt = select(func.count(Interaction.id)).where(
-            Interaction.org_id == org_id,
-            Interaction.created_at >= start_date,
-            Interaction.created_at < end_date,
-            Interaction.type.in_([InteractionType.CALL.value, InteractionType.CHAT_MESSAGE.value, InteractionType.EMAIL.value, InteractionType.SMS.value])
+    outreach_cases = []
+    resp_cases = []
+    deals_cases = []
+    
+    for idx, (_, start_date, end_date) in enumerate(week_ranges):
+        outreach_cases.append(
+            func.sum(case((and_(Interaction.created_at >= start_date, Interaction.created_at < end_date), 1), else_=0)).label(f"w_{idx}")
         )
-        outreach_count = (await db.execute(outreach_stmt)).scalar() or 0
+        resp_cases.append(
+            func.sum(case((and_(Message.created_at >= start_date, Message.created_at < end_date), 1), else_=0)).label(f"w_{idx}")
+        )
+        deals_cases.append(
+            func.sum(case((and_(ClientPipelineState.updated_at >= start_date, ClientPipelineState.updated_at < end_date), 1), else_=0)).label(f"w_{idx}")
+        )
         
-        # Count responses in range
-        resp_stmt = select(func.count(Message.id)).join(MessageThread, Message.thread_id == MessageThread.id).where(
-            MessageThread.org_id == org_id,
-            Message.created_at >= start_date,
-            Message.created_at < end_date,
-            Message.sender_user_id.is_(None)
-        )
-        responses_count = (await db.execute(resp_stmt)).scalar() or 0
-        
-        # Count won deals in range
-        deals_stmt = select(func.count(ClientPipelineState.client_id)).join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id).where(
-            ClientPipelineState.org_id == org_id,
-            ClientPipelineState.updated_at >= start_date,
-            ClientPipelineState.updated_at < end_date,
-            PipelineStage.name.ilike("%won%")
-        )
-        deals_count = (await db.execute(deals_stmt)).scalar() or 0
+    outreach_stmt = select(*outreach_cases).where(
+        Interaction.org_id == org_id,
+        Interaction.type.in_([InteractionType.CALL.value, InteractionType.CHAT_MESSAGE.value, InteractionType.EMAIL.value, InteractionType.SMS.value])
+    )
+    outreach_row = (await db.execute(outreach_stmt)).first()
+    
+    resp_stmt = select(*resp_cases).join(MessageThread, Message.thread_id == MessageThread.id).where(
+        MessageThread.org_id == org_id,
+        Message.sender_user_id.is_(None)
+    )
+    resp_row = (await db.execute(resp_stmt)).first()
+    
+    deals_stmt = select(*deals_cases).join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id).where(
+        ClientPipelineState.org_id == org_id,
+        PipelineStage.name.ilike("%won%")
+    )
+    deals_row = (await db.execute(deals_stmt)).first()
+    
+    weekly_perf = []
+    for idx, (label, _, _) in enumerate(week_ranges):
+        outreach_count = outreach_row[idx] if (outreach_row and outreach_row[idx] is not None) else 0
+        responses_count = resp_row[idx] if (resp_row and resp_row[idx] is not None) else 0
+        deals_count = deals_row[idx] if (deals_row and deals_row[idx] is not None) else 0
         
         weekly_perf.append(
             WeeklyPerformanceItem(
-                week=week_label,
+                week=label,
                 outreach=outreach_count,
                 responses=responses_count,
                 deals=deals_count
@@ -279,32 +293,25 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
     # 3. Country breakdown
     country_metrics = []
     if total_leads > 0:
-        c_stmt = (
-            select(Client.country, func.count(Client.id))
+        country_stmt = (
+            select(
+                Client.country,
+                func.count(Client.id).label("leads"),
+                func.sum(case((PipelineStage.name.ilike("%won%"), 1), else_=0)).label("won")
+            )
             .join(ClientPipelineState, Client.id == ClientPipelineState.client_id)
+            .join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id)
             .where(ClientPipelineState.org_id == org_id)
             .group_by(Client.country)
         )
-        c_res = (await db.execute(c_stmt)).all()
-        for country, count in c_res:
-            # count won
-            won_stmt = (
-                select(func.count(Client.id))
-                .join(ClientPipelineState, Client.id == ClientPipelineState.client_id)
-                .join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id)
-                .where(
-                    ClientPipelineState.org_id == org_id,
-                    Client.country == country,
-                    PipelineStage.name.ilike("%won%")
-                )
-            )
-            won_in_c = (await db.execute(won_stmt)).scalar() or 0
+        country_res = (await db.execute(country_stmt)).all()
+        for country, count, won_in_c in country_res:
             country_metrics.append(
                 CountryMetricItem(
                     country=get_country_name(country),
                     code=country or "GL",
                     leads=count,
-                    won=won_in_c
+                    won=int(won_in_c or 0)
                 )
             )
         country_metrics.sort(key=lambda x: x.leads, reverse=True)
@@ -316,65 +323,80 @@ async def get_analytics(db: AsyncSession, *, org_id: uuid.UUID) -> DashboardAnal
     # 4. Rep Stats
     rep_stats = []
     users = (await db.scalars(select(User).where(User.org_id == org_id))).all()
-    for user in users:
-        # won count
-        u_won_stmt = (
-            select(func.count(ClientPipelineState.client_id))
+    if users:
+        # won count grouped by user
+        won_stmt = (
+            select(ClientPipelineState.assigned_user_id, func.count(ClientPipelineState.client_id))
             .join(PipelineStage, ClientPipelineState.stage_id == PipelineStage.id)
             .where(
                 ClientPipelineState.org_id == org_id,
-                ClientPipelineState.assigned_user_id == user.id,
                 PipelineStage.name.ilike("%won%")
             )
+            .group_by(ClientPipelineState.assigned_user_id)
         )
-        rep_won = (await db.execute(u_won_stmt)).scalar() or 0
+        won_res = dict((await db.execute(won_stmt)).all())
 
-        # calls count
-        u_calls_stmt = select(func.count(Call.id)).where(Call.org_id == org_id, Call.user_id == user.id)
-        rep_calls = (await db.execute(u_calls_stmt)).scalar() or 0
-
-        # outreach count (interactions)
-        u_out_stmt = select(func.count(Interaction.id)).where(
-            Interaction.org_id == org_id,
-            Interaction.user_id == user.id,
-            Interaction.type.in_([InteractionType.CALL.value, InteractionType.CHAT_MESSAGE.value])
+        # calls count grouped by user
+        calls_stmt = (
+            select(Call.user_id, func.count(Call.id))
+            .where(Call.org_id == org_id)
+            .group_by(Call.user_id)
         )
-        rep_outreach = (await db.execute(u_out_stmt)).scalar() or 0
+        calls_res = dict((await db.execute(calls_stmt)).all())
 
-        # Calculate response rate for this rep
-        rep_resp_rate = (rep_won / rep_outreach * 100) if rep_outreach > 0 else 0.0
-        rep_stats.append(
-            RepStatItem(
-                id=str(user.id),
-                name=user.full_name or user.email,
-                dealsWon=rep_won,
-                outreachSent=rep_outreach,
-                responseRate=round(rep_resp_rate, 1),
-                callsMade=rep_calls
+        # outreach count grouped by user
+        outreach_stmt = (
+            select(Interaction.user_id, func.count(Interaction.id))
+            .where(
+                Interaction.org_id == org_id,
+                Interaction.type.in_([InteractionType.CALL.value, InteractionType.CHAT_MESSAGE.value])
             )
+            .group_by(Interaction.user_id)
         )
-    rep_stats.sort(key=lambda x: x.dealsWon, reverse=True)
+        outreach_res = dict((await db.execute(outreach_stmt)).all())
+
+        for user in users:
+            rep_won = won_res.get(user.id, 0)
+            rep_calls = calls_res.get(user.id, 0)
+            rep_outreach = outreach_res.get(user.id, 0)
+            
+            rep_resp_rate = (rep_won / rep_outreach * 100) if rep_outreach > 0 else 0.0
+            rep_stats.append(
+                RepStatItem(
+                    id=str(user.id),
+                    name=user.full_name or user.email,
+                    dealsWon=rep_won,
+                    outreachSent=rep_outreach,
+                    responseRate=round(rep_resp_rate, 1),
+                    callsMade=rep_calls
+                )
+            )
+        rep_stats.sort(key=lambda x: x.dealsWon, reverse=True)
 
     # 5. Funnel Data
     funnel_data = []
     stages = (await db.scalars(
         select(PipelineStage).where(PipelineStage.org_id == org_id).order_by(PipelineStage.position)
     )).all()
-    colors = ["hsl(228 100% 57%)", "hsl(228 80% 50%)", "hsl(37 86% 58%)", "hsl(37 70% 48%)", "hsl(160 71% 33%)", "hsl(358 75% 59%)"]
-    for i, stage in enumerate(stages):
-        cnt_stmt = select(func.count(ClientPipelineState.client_id)).where(
-            ClientPipelineState.org_id == org_id,
-            ClientPipelineState.stage_id == stage.id
+    if stages:
+        funnel_stmt = (
+            select(ClientPipelineState.stage_id, func.count(ClientPipelineState.client_id))
+            .where(ClientPipelineState.org_id == org_id)
+            .group_by(ClientPipelineState.stage_id)
         )
-        cnt = (await db.execute(cnt_stmt)).scalar() or 0
-        funnel_data.append(
-            FunnelStageItem(
-                stage=stage.name.lower(),
-                label=stage.name,
-                count=cnt,
-                color=colors[i % len(colors)]
+        funnel_res = dict((await db.execute(funnel_stmt)).all())
+
+        colors = ["hsl(228 100% 57%)", "hsl(228 80% 50%)", "hsl(37 86% 58%)", "hsl(37 70% 48%)", "hsl(160 71% 33%)", "hsl(358 75% 59%)"]
+        for i, stage in enumerate(stages):
+            cnt = funnel_res.get(stage.id, 0)
+            funnel_data.append(
+                FunnelStageItem(
+                    stage=stage.name.lower(),
+                    label=stage.name,
+                    count=cnt,
+                    color=colors[i % len(colors)]
+                )
             )
-        )
         
     if not funnel_data:
         funnel_data = [

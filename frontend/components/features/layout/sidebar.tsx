@@ -18,6 +18,16 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChatStore } from "@/lib/stores/chat-store";
+import { useQueryClient } from "@tanstack/react-query";
+import { getDashboardOverview, getDashboardAnalytics } from "@/lib/api/dashboard";
+import { DASHBOARD_KEYS } from "@/lib/hooks/use-dashboard";
+import { getBoard, listStages } from "@/lib/api/pipeline";
+import { PIPELINE_KEYS } from "@/lib/hooks/use-pipeline";
+import { listCalls } from "@/lib/api/calls";
+import { CALLS_KEYS } from "@/lib/hooks/use-calls";
+import { listMembers } from "@/lib/api/orgs";
+import { ORG_KEYS } from "@/lib/hooks/use-org";
+import { useLeadsStore } from "@/lib/stores/leads-store";
 
 const nav = [
   { href: "/dashboard/discovery", label: "Discovery", icon: Search },
@@ -35,6 +45,7 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hoveredTooltip, setHoveredTooltip] = useState<{ label: string; top: number } | null>(null);
+  const queryClient = useQueryClient();
 
   const { totalUnread, fetchConversations } = useChatStore((s) => ({
     totalUnread: s.totalUnread(),
@@ -128,6 +139,48 @@ export function Sidebar() {
                       top: rect.top - sidebarRect.top + rect.height / 2,
                     });
                   }
+                }
+                
+                // Prefetch data on hover for instant navigation feel
+                if (item.href === "/dashboard") {
+                  queryClient.prefetchQuery({
+                    queryKey: DASHBOARD_KEYS.overview,
+                    queryFn: getDashboardOverview,
+                    staleTime: 30_000,
+                  });
+                } else if (item.href === "/dashboard/analytics") {
+                  queryClient.prefetchQuery({
+                    queryKey: DASHBOARD_KEYS.analytics,
+                    queryFn: getDashboardAnalytics,
+                    staleTime: 30_000,
+                  });
+                } else if (item.href === "/dashboard/pipeline") {
+                  queryClient.prefetchQuery({
+                    queryKey: PIPELINE_KEYS.board,
+                    queryFn: getBoard,
+                    staleTime: 30_000,
+                  });
+                  queryClient.prefetchQuery({
+                    queryKey: PIPELINE_KEYS.stages,
+                    queryFn: listStages,
+                    staleTime: 60_000,
+                  });
+                } else if (item.href === "/dashboard/calls") {
+                  queryClient.prefetchQuery({
+                    queryKey: CALLS_KEYS.all,
+                    queryFn: listCalls,
+                    staleTime: 15_000,
+                  });
+                } else if (item.href === "/dashboard/team") {
+                  queryClient.prefetchQuery({
+                    queryKey: ORG_KEYS.members,
+                    queryFn: listMembers,
+                    staleTime: 60_000,
+                  });
+                } else if (item.href === "/dashboard/discovery") {
+                  useLeadsStore.getState().fetchFromApi();
+                } else if (item.href === "/dashboard/inbox") {
+                  useChatStore.getState().fetchConversations();
                 }
               }}
               onMouseLeave={() => {
