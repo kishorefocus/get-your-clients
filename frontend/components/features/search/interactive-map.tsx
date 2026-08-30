@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Lead } from "@/types";
@@ -73,6 +73,59 @@ export function InteractiveMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const { theme } = useTheme();
 
+  const [browserLocation, setBrowserLocation] = useState<L.LatLngTuple | null>(null);
+  const [hasCentered, setHasCentered] = useState(false);
+  const browserMarkerRef = useRef<L.Marker | null>(null);
+
+  // Get user geolocation and center/zoom map
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setBrowserLocation([latitude, longitude]);
+      },
+      (error) => {
+        console.error("Error fetching browser location:", error);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []);
+
+  // Handle current location marker and initial map view centering
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !browserLocation) return;
+
+    const [lat, lng] = browserLocation;
+
+    const pulsingIcon = L.divIcon({
+      className: "custom-browser-location-icon",
+      html: `
+        <div class="relative flex items-center justify-center w-8 h-8">
+          <div class="absolute w-8 h-8 rounded-full bg-blue-500 opacity-25 animate-ping"></div>
+          <div class="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md"></div>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+
+    if (browserMarkerRef.current) {
+      browserMarkerRef.current.setLatLng([lat, lng]);
+    } else {
+      const marker = L.marker([lat, lng], { icon: pulsingIcon });
+      marker.bindPopup("Your Location").addTo(map);
+      browserMarkerRef.current = marker;
+    }
+
+    if (!hasCentered) {
+      map.setView([lat, lng], 13, { animate: true, duration: 0.8 });
+      setHasCentered(true);
+    }
+  }, [browserLocation, hasCentered]);
+
   // Filter valid leads
   const validLeads = useMemo(() => {
     return leads.filter(
@@ -140,14 +193,14 @@ export function InteractiveMap({
       map.removeLayer(tileLayerRef.current);
     }
 
-    const tileUrl =
-      theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+    const tileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-    const attribution = `&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>`;
+    const attribution = `&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors`;
 
-    const layer = L.tileLayer(tileUrl, { attribution });
+    const layer = L.tileLayer(tileUrl, {
+      attribution,
+      className: theme === "dark" ? "map-dark-tiles" : "",
+    });
     layer.addTo(map);
     tileLayerRef.current = layer;
   }, [theme]);
@@ -256,10 +309,13 @@ export function InteractiveMap({
     const map = mapRef.current;
     if (!map || validLeads.length === 0) return;
 
+    // Skip fitting bounds to leads if we are focusing on the browser location
+    if (browserLocation) return;
+
     map.invalidateSize();
     const bounds = L.latLngBounds(validLeads.map((l) => [l.lat, l.lng]));
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-  }, [leadsHash, validLeads]);
+  }, [leadsHash, validLeads, browserLocation]);
 
   // 6. Smoothly pan to the active lead position when activeId changes
   useEffect(() => {

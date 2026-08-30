@@ -260,3 +260,8 @@
   color: hsl(var(--primary)) !important;
 }
 
+/* Custom class for dark tiles if using standard OSM tiles */
+.map-dark-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
