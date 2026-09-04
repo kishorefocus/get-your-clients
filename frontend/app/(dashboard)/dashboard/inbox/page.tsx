@@ -9,17 +9,26 @@ import { ChatEmptyState } from "@/components/features/chat/chat-empty-state";
 import { useChatStore } from "@/lib/stores/chat-store";
 import { useChatThread } from "@/lib/hooks/use-chat";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Phone, Video, Info, MoreHorizontal } from "lucide-react";
+import { Phone, Video, Info, MoreHorizontal, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function ConversationHeader() {
-  const { conversations, activeConversationId } = useChatStore();
+  const { conversations, activeConversationId, setActiveConversation } = useChatStore();
   const conv = conversations.find((c) => c.id === activeConversationId);
   if (!conv) return null;
 
   return (
     <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
       <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-8 w-8 mr-1 p-0 text-muted-foreground hover:text-foreground"
+          onClick={() => setActiveConversation(null as any)}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
             {conv.leadName.slice(0, 2).toUpperCase()}
@@ -70,10 +79,12 @@ export default function InboxPage() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Auto-select the first conversation if none is active
+  // Auto-select the first conversation if none is active (only on desktop)
   useEffect(() => {
-    if (!activeConversationId && conversations.length > 0) {
-      setActiveConversation(conversations[0].id);
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      if (!activeConversationId && conversations.length > 0) {
+        setActiveConversation(conversations[0].id);
+      }
     }
   }, [activeConversationId, conversations, setActiveConversation]);
 
@@ -81,8 +92,10 @@ export default function InboxPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar title="Inbox" />
       <div className="flex min-h-0 flex-1">
-        <ConversationList />
-        <div className="flex min-h-0 flex-1 flex-col bg-surface">
+        <div className={cn("w-full md:w-auto", activeConversationId ? "hidden md:block" : "block")}>
+          <ConversationList />
+        </div>
+        <div className={cn("flex min-h-0 flex-1 flex-col bg-surface", activeConversationId ? "flex" : "hidden md:flex")}>
           {activeConversationId ? (
             <>
               {/* Mount WS connector as a side-effect component */}
@@ -99,3 +112,4 @@ export default function InboxPage() {
     </div>
   );
 }
+

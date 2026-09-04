@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { scaleIn, springUI, tapProps } from "@/lib/motion";
 import { useInviteMember } from "@/lib/hooks/use-org";
 import { toast } from "sonner";
+import { sendTeammateInviteEmail } from "@/app/actions";
 
 interface Props {
   open: boolean;
@@ -45,6 +46,20 @@ export function InviteModal({ open, onClose }: Props) {
       if (response && response.token) {
         const url = `${window.location.origin}/onboard?token=${response.token}`;
         setInviteUrl(url);
+        
+        // Trigger invitation email using Resend
+        try {
+          const emailRes = await sendTeammateInviteEmail(email, url);
+          if (emailRes.success) {
+            toast.success("Invitation email sent successfully!");
+          } else {
+            console.error("Resend email sending failure:", emailRes.error);
+            toast.error("Invite created, but failed to send email: " + emailRes.error);
+          }
+        } catch (emailErr: any) {
+          console.error("Email action error:", emailErr);
+          toast.error("Failed to trigger invitation email");
+        }
       }
       setSent(true);
     } catch (err) {

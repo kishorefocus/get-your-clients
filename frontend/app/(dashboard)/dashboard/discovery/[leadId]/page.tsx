@@ -55,6 +55,7 @@ import {
 } from "@/lib/hooks/use-tags";
 import { useInteractions, useCreateInteraction } from "@/lib/hooks/use-interactions";
 import { toast } from "sonner";
+import { sendClientOutreachEmail } from "@/app/actions";
 
 const stages: PipelineStage[] = ["new", "contacted", "responded", "negotiating", "won", "lost"];
 const stageColor: Record<PipelineStage, "default" | "secondary" | "success" | "danger" | "accent"> = {
@@ -108,6 +109,51 @@ export default function ClientProfilePage() {
   // Dynamic Interactions API
   const { data: interactionsData, isLoading: isLoadingInteractions } = useInteractions(params.leadId);
   const createInteractionMutation = useCreateInteraction(params.leadId);
+
+  // Email modal state
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailTarget, setEmailTarget] = useState("");
+  const [emailTargetName, setEmailTargetName] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleOpenEmailModal = (email: string, name: string) => {
+    setEmailTarget(email);
+    setEmailTargetName(name);
+    setEmailSubject(`Outreach from GlobalReach: regarding your business`);
+    setEmailBody(`Hello ${name},\n\nI noticed your business on GlobalReach and wanted to connect.\n\nBest regards,\n${user?.full_name || "GlobalReach Sales Team"}`);
+    setIsEmailModalOpen(true);
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailTarget || !emailSubject.trim() || !emailBody.trim()) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    setIsSendingEmail(true);
+    try {
+      const res = await sendClientOutreachEmail(emailTarget, emailSubject.trim(), emailBody.trim());
+      if (res.success) {
+        toast.success(`Email sent successfully to ${emailTarget}!`);
+        // Log interaction
+        await createInteractionMutation.mutateAsync({
+          type: "email",
+          summary: `Subject: ${emailSubject.trim()}\n\nRecipient: ${emailTargetName} <${emailTarget}>\n\nBody:\n${emailBody.trim()}`,
+        });
+        setIsEmailModalOpen(false);
+        setEmailSubject("");
+        setEmailBody("");
+      } else {
+        toast.error("Failed to send email: " + res.error);
+      }
+    } catch (err: any) {
+      toast.error("Failed to send email outreach: " + err.message);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   if (!lead) return notFound();
 
@@ -353,7 +399,11 @@ export default function ClientProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-2.5 text-sm">
                   <InfoRow icon={Globe} label={lead.website ?? "—"} />
-                  <InfoRow icon={Mail} label={lead.email ?? "—"} />
+                  <InfoRow
+                    icon={Mail}
+                    label={lead.email ?? "—"}
+                    onEmailClick={(email) => handleOpenEmailModal(email, lead.name)}
+                  />
                   <InfoRow icon={Phone} label={lead.phone ?? "—"} />
                   <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
                     <span>Company size</span>
@@ -404,7 +454,18 @@ export default function ClientProfilePage() {
                             )}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">{c.title || "No Title"}</p>
-                          {c.email && <p className="truncate text-[10px] text-muted-foreground/80">{c.email}</p>}
+                          {c.email && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <p className="truncate text-[10px] text-muted-foreground/80">{c.email}</p>
+                              <button
+                                type="button"
+                                className="text-[10px] text-primary hover:underline font-medium"
+                                onClick={() => handleOpenEmailModal(c.email || "", c.name)}
+                              >
+                                Send Email
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0 opacity-0 group-hover/contact:opacity-100 transition-opacity">
@@ -592,15 +653,98 @@ export default function ClientProfilePage() {
           </Card>
         </div>
       )}
+
+      {/* Outreach Email Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl">
+            <CardHeader className="flex-row items-center justify-between pb-3">
+              <CardTitle>Send Outreach Email</CardTitle>
+              <button onClick={() => setIsEmailModalOpen(false)}>
+                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </CardHeader>
+            <form onSubmit={handleSendEmail}>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Recipient</label>
+                  <Input
+                    value={`${emailTargetName} <${emailTarget}>`}
+                    readOnly
+                    disabled
+                    className="bg-muted/40 cursor-not-allowed border-border/80 text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Subject *</label>
+                  <Input
+                    placeholder="e.g. Collaboration Proposal"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Message *</label>
+                  <textarea
+                    placeholder="Type your outreach message here..."
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    required
+                    rows={6}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary/45"
+                  />
+                </div>
+              </CardContent>
+              <div className="flex justify-end gap-2 px-5 pb-5 pt-2">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setIsEmailModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={isSendingEmail}>
+                  {isSendingEmail ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 animate-spin rounded-full border border-primary-foreground border-t-transparent" />
+                      Sending...
+                    </span>
+                  ) : (
+                    "Send Email"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
-function InfoRow({ icon: Icon, label }: { icon: any; label: string }) {
+function InfoRow({
+  icon: Icon,
+  label,
+  onEmailClick,
+}: {
+  icon: any;
+  label: string;
+  onEmailClick?: (email: string) => void;
+}) {
+  const isEmail = Icon === Mail && label && label !== "—" && label.includes("@");
   return (
-    <div className="flex items-center gap-2 text-muted-foreground">
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="truncate text-foreground">{label}</span>
+    <div className="flex items-center justify-between gap-2 text-muted-foreground w-full">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate text-foreground">{label}</span>
+      </div>
+      {isEmail && onEmailClick && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-1.5 text-[10px] text-primary hover:text-primary-foreground hover:bg-primary gap-1"
+          onClick={() => onEmailClick(label)}
+        >
+          <Mail className="h-3 w-3" /> Send
+        </Button>
+      )}
     </div>
   );
 }

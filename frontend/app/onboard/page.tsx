@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Globe2, CheckCircle2, Shield, Eye, EyeOff, Loader2, AlertCircle
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useId, useEffect, Suspense } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -311,9 +311,9 @@ function OnboardContent() {
                       {errorMsg || "This invitation link is invalid, expired, or has already been accepted."}
                     </p>
                   </div>
-                  <Button asChild className="mt-4 shadow-sm" variant="outline">
-                    <Link href="/login">Go to Login</Link>
-                  </Button>
+                  <Link href="/login" className={buttonVariants({ variant: "outline", className: "mt-4 shadow-sm" })}>
+                    Go to Login
+                  </Link>
                 </motion.div>
               ) : submitState === "success" ? (
                 /* Acceptance success state */

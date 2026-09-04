@@ -13,6 +13,7 @@ from app.models.subscription import Subscription
 from app.models.tag import Tag, client_tags
 from app.models.user import User
 from app.models.invitation import Invitation
+from app.models.notification import Notification
 
 __all__ = [
     "Organization",
@@ -32,4 +33,5 @@ __all__ = [
     "AuditLog",
     "Subscription",
     "Invitation",
+    "Notification",
 ]

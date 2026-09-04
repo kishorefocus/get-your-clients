@@ -23,7 +23,7 @@ const avatarColors = [
 ];
 
 interface Props {
-  member: TeamMember;
+  member: TeamMember & { status?: string };
   index: number;
 }
 
