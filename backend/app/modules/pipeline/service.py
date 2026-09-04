@@ -73,6 +73,9 @@ async def get_board(db: AsyncSession, *, org_id: uuid.UUID) -> list[KanbanColumn
                     assignedRep=rep_name or rep_email,
                     phone=client.phone,
                     email=client.email,
+                    address=client.address,
+                    website=client.website,
+                    tags=[t.name for t in client.tags] if client.tags else [],
                 )
             )
         board.append(KanbanColumnResponse(stage=stage, clients=clients_in_stage))

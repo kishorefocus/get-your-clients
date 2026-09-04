@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar, MapPin, GripVertical, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, GripVertical, CheckCircle2, Phone } from "lucide-react";
 import Link from "next/link";
 import { Lead } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,9 @@ import { cn, initials, formatCountryName } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
 import { staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { WhatsAppModal } from "@/components/features/pipeline/whatsapp-modal";
+import { ClientDetailsModal } from "@/components/features/pipeline/client-details-modal";
 
 const priorityColor = { low: "secondary", medium: "accent", high: "danger" } as const;
 
@@ -18,6 +20,9 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
   const prefersReduced = useReducedMotion();
   const [justDropped, setJustDropped] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  const cleanPhone = lead.phone ? lead.phone.replace(/[^\d+]/g, "") : "";
 
   // dnd-kit draggable setup (skipped for DragOverlay item to prevent duplicate key/node registration)
   const draggable = useDraggable({ id: lead.id, disabled: !!isOverlay });
@@ -37,18 +42,23 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
   const cardContent = (
     <div className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
-        <Link 
-          href={`/dashboard/discovery/${lead.id}`} 
-          className="min-w-0 text-sm font-semibold hover:text-primary hover:underline transition-colors"
-          onClick={(e) => e.stopPropagation()}
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDetailsOpen(true);
+          }}
+          className="min-w-0 text-sm font-semibold hover:text-primary hover:underline transition-colors text-left truncate cursor-pointer"
         >
           {lead.name}
-        </Link>
+        </button>
         {!isOverlay && (
           <button 
             {...draggable.attributes} 
             {...draggable.listeners} 
+            onClick={(e) => e.stopPropagation()}
             className="shrink-0 cursor-grab touch-none p-1 rounded hover:bg-muted text-muted-foreground active:cursor-grabbing focus-visible:outline-ring"
+            title="Drag to reorder stage"
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
@@ -58,7 +68,7 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
       <p className="text-[11px] text-muted-foreground">{lead.category}</p>
 
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <MapPin className="h-3 w-3 text-muted-foreground/80" /> 
+        <MapPin className="h-3 w-3 text-muted-foreground/80 shrink-0" /> 
         <span className="truncate">{lead.city}, {formatCountryName(lead.countryCode)}</span>
       </div>
 
@@ -80,29 +90,58 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
               {initials(lead.assignedRep)}
             </div>
-            <span className="truncate max-w-[90px]">{lead.assignedRep}</span>
+            <span className="truncate max-w-[80px] sm:max-w-[90px]">{lead.assignedRep}</span>
           </div>
         ) : (
           <span className="text-[10px] text-muted-foreground/60 italic">Unassigned</span>
         )}
 
-        {/* WhatsApp Button */}
+        {/* Action Buttons: Call & WhatsApp */}
         {!isOverlay && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setIsWhatsAppOpen(true);
-            }}
-            title={`Outreach via WhatsApp to ${lead.name}`}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#25D366]/15 text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/25 hover:border-[#25D366]/50 transition-all border border-[#25D366]/30 shadow-xs cursor-pointer shrink-0 active:scale-95 ml-auto"
-          >
-            <svg className="h-3 w-3 fill-current shrink-0" viewBox="0 0 24 24">
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.56 0 8.25 3.69 8.25 8.24 0 2.2-.86 4.28-2.42 5.83a8.21 8.21 0 0 1-5.83 2.42c-1.44 0-2.86-.38-4.11-1.11l-.3-.18-3.05.8 1.05-2.97-.2-.31a8.17 8.17 0 0 1-1.25-4.48c0-4.55 3.7-8.24 8.26-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z" />
-            </svg>
-            <span>WhatsApp</span>
-          </button>
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            {/* Call Button */}
+            {cleanPhone ? (
+              <a
+                href={`tel:${cleanPhone}`}
+                onClick={(e) => e.stopPropagation()}
+                title={`Call ${lead.name} (${lead.phone})`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25 hover:border-blue-500/50 transition-all border border-blue-500/30 shadow-xs cursor-pointer shrink-0 active:scale-95"
+              >
+                <Phone className="h-3 w-3 shrink-0" />
+                <span>Call</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toast.info(`No phone number recorded for ${lead.name}`);
+                }}
+                title="No phone number recorded"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted/60 text-muted-foreground/50 border border-border/40 cursor-not-allowed shrink-0"
+              >
+                <Phone className="h-3 w-3 shrink-0" />
+                <span>Call</span>
+              </button>
+            )}
+
+            {/* WhatsApp Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsWhatsAppOpen(true);
+              }}
+              title={`Outreach via WhatsApp to ${lead.name}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#25D366]/15 text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/25 hover:border-[#25D366]/50 transition-all border border-[#25D366]/30 shadow-xs cursor-pointer shrink-0 active:scale-95"
+            >
+              <svg className="h-3 w-3 fill-current shrink-0" viewBox="0 0 24 24">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.56 0 8.25 3.69 8.25 8.24 0 2.2-.86 4.28-2.42 5.83a8.21 8.21 0 0 1-5.83 2.42c-1.44 0-2.86-.38-4.11-1.11l-.3-.18-3.05.8 1.05-2.97-.2-.31a8.17 8.17 0 0 1-1.25-4.48c0-4.55 3.7-8.24 8.26-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z" />
+              </svg>
+              <span>WhatsApp</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -135,22 +174,35 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
         animate={justDropped && !prefersReduced ? { scale: [0.96, 1.02, 1] } : { scale: 1 }}
         transition={{ duration: 0.3, ease: EASE_OUT }}
         whileHover={draggable.isDragging ? {} : { y: -2, transition: { duration: 0.15 } }}
+        onClick={() => {
+          if (!draggable.isDragging) {
+            setIsDetailsOpen(true);
+          }
+        }}
         className={cn(
-          "rounded-md border bg-card p-3 shadow-subtle relative transition-shadow focus-within:ring-1 focus-within:ring-primary/40",
+          "rounded-md border bg-card p-3 shadow-subtle relative transition-shadow focus-within:ring-1 focus-within:ring-primary/40 cursor-pointer",
           draggable.isDragging 
             ? "opacity-40 border-primary/40 shadow-none" 
-            : "border-border hover:shadow-card"
+            : "border-border hover:shadow-card hover:border-border-hover"
         )}
       >
         {cardContent}
       </motion.div>
 
       {!isOverlay && (
-        <WhatsAppModal
-          lead={lead}
-          isOpen={isWhatsAppOpen}
-          onClose={() => setIsWhatsAppOpen(false)}
-        />
+        <>
+          <ClientDetailsModal
+            lead={lead}
+            isOpen={isDetailsOpen}
+            onClose={() => setIsDetailsOpen(false)}
+            onOpenWhatsApp={() => setIsWhatsAppOpen(true)}
+          />
+          <WhatsAppModal
+            lead={lead}
+            isOpen={isWhatsAppOpen}
+            onClose={() => setIsWhatsAppOpen(false)}
+          />
+        </>
       )}
     </>
   );

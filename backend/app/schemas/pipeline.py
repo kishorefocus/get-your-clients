@@ -36,6 +36,9 @@ class KanbanClientItem(BaseModel):
     assignedRep: str | None = None
     phone: str | None = None
     email: str | None = None
+    address: str | None = None
+    website: str | None = None
+    tags: list[str] = []
 
     model_config = {"from_attributes": True}
 

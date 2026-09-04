@@ -28,6 +28,9 @@ export interface KanbanClientItem {
   assignedRep?: string | null;
   phone?: string | null;
   email?: string | null;
+  address?: string | null;
+  website?: string | null;
+  tags?: string[];
 }
 
 export interface KanbanColumnResponse {

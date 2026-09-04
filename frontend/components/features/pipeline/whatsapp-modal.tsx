@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lead } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,15 @@ interface WhatsAppModalProps {
 }
 
 export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("intro");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize or update phone number when lead changes
   useEffect(() => {
@@ -49,7 +55,7 @@ export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
     }
   }, [lead, selectedTemplate]);
 
-  if (!isOpen || !lead) return null;
+  if (!mounted || !isOpen || !lead) return null;
 
   const handleTemplateChange = (tmplKey: string) => {
     setSelectedTemplate(tmplKey);
@@ -92,9 +98,9 @@ export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
     onClose();
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -286,4 +292,6 @@ export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
       </div>
     </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.body);
 }

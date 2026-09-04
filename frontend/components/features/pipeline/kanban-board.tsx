@@ -22,17 +22,18 @@ function clientToLead(c: any, stageName: string): Lead {
     country: c.country || "",
     countryCode: (c.country || "").toUpperCase().slice(0, 2) || "GL",
     city: c.city || "",
-    address: "",
-    lat: 0,
-    lng: 0,
+    address: c.address || "",
+    lat: c.latitude || 0,
+    lng: c.longitude || 0,
     rating: c.rating,
     phone: c.phone || undefined,
     email: c.email || undefined,
+    website: c.website || undefined,
     stage: stageName.toLowerCase() as PipelineStage,
     priority: (c.priority || "medium") as "low" | "medium" | "high",
     nextFollowUp: c.nextFollowUp,
     assignedRep: c.assignedRep,
-    tags: []
+    tags: c.tags || []
   };
 }
 
