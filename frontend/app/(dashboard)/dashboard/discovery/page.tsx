@@ -13,6 +13,9 @@ import { LeadCard } from "@/components/features/search/lead-card";
 import { MapView } from "@/components/features/search/map-view";
 import { useLeadsStore } from "@/lib/stores/leads-store";
 import { useMyOrg } from "@/lib/hooks/use-org";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { useSearchLimitStore } from "@/lib/stores/search-limit-store";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainerFast, fadeIn, fadeUp, springUI, tapProps, cardHoverProps } from "@/lib/motion";
@@ -223,6 +226,8 @@ export default function DiscoveryPage() {
   const fetchFromApi = useLeadsStore((s) => s.fetchFromApi);
 
   const { data: myOrg } = useMyOrg();
+  const { user } = useAuth();
+  const recordSuccessfulSearch = useSearchLimitStore((s) => s.recordSuccessfulSearch);
   const isFree = myOrg?.plan === "free";
 
   // AI Finder Wizard states
@@ -841,6 +846,18 @@ export default function DiscoveryPage() {
                             city: parsed.city,
                             country: parsed.country
                           }));
+
+                          // Record AI discovery search for free plan users
+                          const res = recordSuccessfulSearch(user?.email || null, myOrg?.plan);
+                          if (isFree) {
+                            if (res.count === 1) {
+                              toast.info("Search 1 of 3 completed on Free plan.");
+                            } else if (res.count === 2) {
+                              toast.warning("Search 2 of 3 completed on Free plan.");
+                            } else if (res.count >= 3) {
+                              toast.error("Free search limit reached (3/3)! Dashboard locks in 30 seconds.");
+                            }
+                          }
                         }}
                         disabled={selectedKeywordIndex === null || selectedKeywordIndex === undefined}
                         className="w-full h-8 text-xs font-semibold uppercase tracking-wider bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white"

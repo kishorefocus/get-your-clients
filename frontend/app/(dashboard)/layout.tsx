@@ -8,6 +8,7 @@ import { MobileDrawer } from "@/components/features/layout/mobile-drawer";
 import { CommandPalette } from "@/components/features/layout/command-palette";
 import { PageTransitionWrapper } from "@/components/features/layout/page-transition";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { UpgradeLockOverlay } from "@/components/features/subscription/upgrade-lock-overlay";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       <MobileDrawer />
       <CommandPalette />
+      <UpgradeLockOverlay />
     </div>
   );
 }
