@@ -62,12 +62,14 @@ export default function TeamPage() {
       <Topbar
         title="Team"
         actions={
-          <Button onClick={() => setInviteOpen(true)} size="sm" className="gap-2 focus-visible:outline-ring">
-            <UserPlus className="h-4 w-4" /> Invite teammate
+          <Button onClick={() => setInviteOpen(true)} size="sm" className="h-8 gap-1.5 px-2.5 text-xs focus-visible:outline-ring">
+            <UserPlus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Invite teammate</span>
+            <span className="sm:hidden">Invite</span>
           </Button>
         }
       />
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-6 scrollbar-thin">
         {/* Org stats */}
         <motion.div
           variants={staggerContainer}

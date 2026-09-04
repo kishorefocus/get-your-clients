@@ -36,19 +36,9 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useNotifications, useReadAllNotifications, useReadNotification } from "@/lib/hooks/use-notifications";
 import { formatDistanceToNow } from "date-fns";
+import { useUiStore } from "@/lib/stores/ui-store";
 
 const MotionButton = motion(Button);
-
-const mobileNavItems = [
-  { href: "/dashboard/discovery", label: "Discovery", icon: SearchIcon },
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
-  { href: "/dashboard/calls", label: "Calls", icon: PhoneIcon },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/team", label: "Team", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
-];
 
 export function Topbar({ title, actions }: { title: string; actions?: React.ReactNode }) {
   const { theme, toggle } = useTheme();
@@ -56,7 +46,7 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
   const router = useRouter();
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const openMobileMenu = useUiStore((s) => s.openMobileMenu);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const { data: notifications = [] } = useNotifications();
@@ -71,22 +61,22 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-5">
-      <div className="flex items-center gap-1.5">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/95 backdrop-blur-md px-3 sm:px-5">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 mr-2">
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden mr-1 h-8 w-8 text-muted-foreground hover:text-foreground"
-          onClick={() => setIsMobileMenuOpen(true)}
+          className="md:hidden shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground active:scale-95"
+          onClick={openMobileMenu}
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="font-display text-[19px] font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display text-base sm:text-[19px] font-semibold tracking-tight truncate">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-2">
-        {actions && <>{actions}</>}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {actions && <div className="shrink-0 flex items-center">{actions}</div>}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -105,11 +95,11 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
           <MotionButton
             variant="default"
             size="sm"
-            className="h-8 gap-1.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-xs rounded-full border-none shadow-sm mr-1.5"
+            className="h-8 gap-1 px-2 sm:px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-xs rounded-full border-none shadow-sm"
             {...tapProps}
           >
             <Zap className="h-3.5 w-3.5 fill-white text-white animate-pulse" />
-            <span className="hidden sm:inline">Upgrade</span>
+            <span className="hidden md:inline">Upgrade</span>
           </MotionButton>
         </Link>
 
@@ -162,7 +152,7 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute right-0 mt-2 z-50 w-80 rounded-lg border border-border bg-popover p-1.5 shadow-md text-popover-foreground flex flex-col max-h-[400px]"
+                  className="absolute right-0 mt-2 z-50 w-80 rounded-lg border border-border bg-popover p-1.5 shadow-md text-popover-foreground flex flex-col max-h-[400px] bg-[aliceblue]"
                 >
                   <div className="flex items-center justify-between px-2.5 py-2 border-b border-border/60">
                     <p className="text-xs font-semibold">Notifications ({unreadCount} unread)</p>
@@ -175,7 +165,7 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="overflow-y-auto flex-1 py-1 divide-y divide-border/40 scrollbar-thin">
                     {notifications.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-8">All caught up! No notifications.</p>
@@ -186,8 +176,8 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
                           n.type === "welcome"
                             ? "bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400"
                             : n.type === "tip"
-                            ? "bg-amber-500/10 text-amber-500 dark:bg-amber-500/20 dark:text-amber-400"
-                            : "bg-blue-500/10 text-blue-500 dark:bg-blue-500/20 dark:text-blue-400";
+                              ? "bg-amber-500/10 text-amber-500 dark:bg-amber-500/20 dark:text-amber-400"
+                              : "bg-blue-500/10 text-blue-500 dark:bg-blue-500/20 dark:text-blue-400";
                         return (
                           <div
                             key={n.id}
@@ -254,7 +244,7 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
                     <p className="text-xs font-semibold truncate">{user?.full_name || "User"}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{user?.email || ""}</p>
                   </div>
-                  
+
                   <div className="mt-1.5 space-y-0.5">
                     <button
                       onClick={() => {
@@ -266,7 +256,7 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
                       <Settings className="h-3.5 w-3.5 text-muted-foreground" />
                       Profile Settings
                     </button>
-                    
+
                     <button
                       onClick={handleLogout}
                       className="w-full text-left flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
@@ -282,77 +272,6 @@ export function Topbar({ title, actions }: { title: string; actions?: React.Reac
         </div>
       </div>
 
-      {/* Mobile navigation drawer */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            {/* Overlay backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 z-55 bg-black/60 backdrop-blur-sm"
-            />
-            {/* Drawer Container */}
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 top-0 z-55 flex w-72 flex-col border-r border-[#20328c]/30 bg-gradient-to-b from-[#172774] via-[#0c1448] to-[#1a4da6] text-slate-200 shadow-2xl p-4"
-            >
-              {/* Header */}
-              <div className="flex h-12 items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-tr from-blue-600 to-cyan-500 text-white">
-                    <Globe2 className="h-4 w-4" />
-                  </div>
-                  <span className="font-display text-[17px] font-semibold text-white">
-                    GlobalReach
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-slate-300 hover:text-white hover:bg-white/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Navigation Links */}
-              <nav className="flex-1 space-y-1 py-4 overflow-y-auto">
-                {mobileNavItems.map((item) => {
-                  const active =
-                    pathname === item.href ||
-                    (item.href !== "/dashboard" && pathname?.startsWith(item.href));
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={cn(
-                        "group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative",
-                        active
-                          ? "bg-white/10 text-white border-l-2 border-blue-400"
-                          : "text-slate-300 hover:bg-white/5 hover:text-white"
-                      )}
-                    >
-                      <span className="flex items-center gap-3">
-                        <Icon className={cn("h-4 w-4", active ? "text-blue-400" : "text-slate-400")} />
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </header>
   );
 }

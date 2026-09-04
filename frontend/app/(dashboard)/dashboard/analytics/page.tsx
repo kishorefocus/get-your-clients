@@ -128,8 +128,8 @@ export default function AnalyticsPage() {
         <Topbar
           title="Analytics"
           actions={
-            <Button variant="ghost" size="sm" className="gap-2 text-xs hover:bg-muted/80 focus-visible:outline-ring" disabled>
-              <Download className="h-3.5 w-3.5" /> Export CSV
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs hover:bg-muted/80 focus-visible:outline-ring" disabled>
+              <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export CSV</span>
             </Button>
           }
         />
@@ -143,12 +143,12 @@ export default function AnalyticsPage() {
       <Topbar
         title="Analytics"
         actions={
-          <Button variant="ghost" size="sm" className="gap-2 text-xs hover:bg-muted/80 focus-visible:outline-ring">
-            <Download className="h-3.5 w-3.5" /> Export CSV
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs hover:bg-muted/80 focus-visible:outline-ring">
+            <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Export CSV</span>
           </Button>
         }
       />
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-6 scrollbar-thin space-y-5">
         {/* KPI row */}
         <motion.div
           variants={staggerContainer}

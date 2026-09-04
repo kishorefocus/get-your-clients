@@ -35,27 +35,29 @@ function SettingsContent() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar title="Settings" />
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-6 scrollbar-thin">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 bg-muted/40 relative">
-            {tabs.map((t) => (
-              <TabsTrigger
-                key={t.value}
-                value={t.value}
-                className="gap-2 relative focus-visible:outline-ring data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-              >
-                <t.icon className="h-3.5 w-3.5 relative z-10" />
-                <span className="relative z-10">{t.label}</span>
-                {activeTab === t.value && (
-                  <motion.div
-                    layoutId="active-settings-tab"
-                    className="absolute inset-0 rounded-md bg-background shadow-subtle z-0"
-                    transition={springUI}
-                  />
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="w-full overflow-x-auto scrollbar-none pb-1 mb-6">
+            <TabsList className="inline-flex h-10 items-center bg-muted/40 relative min-w-max p-1">
+              {tabs.map((t) => (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className="gap-2 relative focus-visible:outline-ring data-[state=active]:bg-transparent data-[state=active]:shadow-none text-xs sm:text-sm px-3 py-1.5"
+                >
+                  <t.icon className="h-3.5 w-3.5 relative z-10" />
+                  <span className="relative z-10">{t.label}</span>
+                  {activeTab === t.value && (
+                    <motion.div
+                      layoutId="active-settings-tab"
+                      className="absolute inset-0 rounded-md bg-background shadow-subtle z-0"
+                      transition={springUI}
+                    />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
           
           {tabs.map((t) => (
             <TabsContent key={t.value} value={t.value} className="mt-0 focus-visible:outline-none">

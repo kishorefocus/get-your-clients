@@ -26,6 +26,8 @@ function clientToLead(c: any, stageName: string): Lead {
     lat: 0,
     lng: 0,
     rating: c.rating,
+    phone: c.phone || undefined,
+    email: c.email || undefined,
     stage: stageName.toLowerCase() as PipelineStage,
     priority: (c.priority || "medium") as "low" | "medium" | "high",
     nextFollowUp: c.nextFollowUp,
@@ -104,7 +106,7 @@ export function KanbanBoard() {
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="flex h-full gap-4 overflow-x-auto p-4 scrollbar-thin"
+        className="flex h-full gap-3 sm:gap-4 overflow-x-auto p-3 sm:p-4 pb-20 md:pb-4 scrollbar-thin"
       >
         {defaultStages.map((stage) => (
           <KanbanColumn 

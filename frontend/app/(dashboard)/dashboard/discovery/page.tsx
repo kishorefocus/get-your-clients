@@ -468,8 +468,8 @@ export default function DiscoveryPage() {
             </motion.div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-border bg-background px-4 py-2.5">
-                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between border-b border-border bg-background px-3 sm:px-4 py-2 sm:py-2.5 gap-2">
+                <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 min-w-0">
                   {isLoadingFromApi ? (
                     <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   ) : (
@@ -486,15 +486,15 @@ export default function DiscoveryPage() {
                       </motion.span>
                     </AnimatePresence>
                   )}
-                  <span>
+                  <span className="truncate">
                     results {filters.country ? ` in ${filters.country}` : " worldwide"}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 text-xs border-border bg-card shadow-subtle hover:bg-muted text-muted-foreground hover:text-foreground"
+                    className="h-8 gap-1.5 text-xs border-border bg-card shadow-subtle hover:bg-muted text-muted-foreground hover:text-foreground px-2 sm:px-3"
                     onClick={() => setIsFilterOpen(true)}
                   >
                     <Search className="h-3.5 w-3.5" />
@@ -502,59 +502,63 @@ export default function DiscoveryPage() {
                   </Button>
                   <Button
                     size="sm"
-                    className="h-8 gap-1.5 text-xs bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white font-semibold shadow-subtle flex items-center animate-pulse"
+                    className="h-8 gap-1.5 text-xs bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white font-semibold shadow-subtle flex items-center px-2 sm:px-3"
                     onClick={() => setIsWizardOpen(true)}
                   >
                     <Sparkles className="h-3.5 w-3.5 text-white fill-white/20" />
-                    AI Persona Finder
+                    <span className="hidden xs:inline">AI Persona</span>
+                    <span className="xs:hidden">AI</span>
                   </Button>
-                  <div className="flex items-center gap-1 rounded-md border border-border p-0.5 bg-muted/40 relative">
+                  <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5 bg-muted/40 relative">
                     <ViewButton icon={List} active={view === "list"} onClick={() => setView("list")} label="List" />
-                    <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" />
+                    <ViewButton icon={Columns2} active={view === "split"} onClick={() => setView("split")} label="Split" className="hidden sm:inline-flex" />
                     <ViewButton icon={MapIcon} active={view === "map"} onClick={() => setView("map")} label="Map" />
                   </div>
                 </div>
               </div>
 
               <div className="flex min-h-0 flex-1 overflow-hidden relative">
-            <AnimatePresence mode="wait">
-              {view !== "map" && (
-                <motion.div
-                  key="list-view"
-                  variants={fadeIn}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className={cn(
-                    "min-h-0 space-y-3 overflow-y-auto p-4 scrollbar-thin",
-                    view === "split" ? "w-full max-w-md border-r border-border bg-background/50" : "w-full"
-                  )}
-                >
-                  {results.length === 0 ? (
-                    <EmptyState key="empty" />
-                  ) : (
+                <AnimatePresence mode="wait">
+                  {view !== "map" && (
                     <motion.div
-                      key="staggered-leads"
-                      variants={staggerContainerFast}
+                      key="list-view"
+                      variants={fadeIn}
                       initial="hidden"
                       animate="visible"
-                      className="space-y-3"
+                      exit="exit"
+                      className={cn(
+                        "min-h-0 space-y-3 overflow-y-auto p-3 sm:p-4 pb-20 md:pb-4 scrollbar-thin",
+                        view === "split" ? "w-full md:max-w-md md:border-r border-border bg-background/50" : "w-full"
+                      )}
                     >
-                      {results.map((lead) => (
-                        <LeadCard key={lead.id} lead={lead} active={activeId === lead.id} onHover={setActiveId} onSelect={setActiveId} />
-                      ))}
+                      {results.length === 0 ? (
+                        <EmptyState key="empty" />
+                      ) : (
+                        <motion.div
+                          key="staggered-leads"
+                          variants={staggerContainerFast}
+                          initial="hidden"
+                          animate="visible"
+                          className="space-y-3"
+                        >
+                          {results.map((lead) => (
+                            <LeadCard key={lead.id} lead={lead} active={activeId === lead.id} onHover={setActiveId} onSelect={setActiveId} />
+                          ))}
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </AnimatePresence>
 
-            {view !== "list" && (
-              <div className="min-h-0 flex-1 relative bg-surface">
-                <MapView leads={results} activeId={activeId} onHover={setActiveId} onSelect={setActiveId} />
+                {view !== "list" && (
+                  <div className={cn(
+                    "min-h-0 flex-1 relative bg-surface pb-16 md:pb-0",
+                    view === "split" ? "hidden md:block" : "block"
+                  )}>
+                    <MapView leads={results} activeId={activeId} onHover={setActiveId} onSelect={setActiveId} />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
         </>
       )}
     </div>
@@ -863,7 +867,7 @@ export default function DiscoveryPage() {
   );
 }
 
-function ViewButton({ icon: Icon, active, onClick, label }: { icon: any; active: boolean; onClick: () => void; label: string }) {
+function ViewButton({ icon: Icon, active, onClick, label, className }: { icon: any; active: boolean; onClick: () => void; label: string; className?: string }) {
   return (
     <motion.button
       onClick={onClick}
@@ -872,7 +876,8 @@ function ViewButton({ icon: Icon, active, onClick, label }: { icon: any; active:
       title={label}
       className={cn(
         "relative flex h-7 items-center gap-1.5 rounded px-2.5 text-xs font-medium transition-colors focus-visible:outline-ring z-10",
-        active ? "text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        active ? "text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        className
       )}
     >
       {active && (

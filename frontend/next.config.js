@@ -10,7 +10,8 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_APP_NAME: "GlobalReach",
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.5:8001",
+    //http://192.168.1.5:8001
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
   },
 };
 

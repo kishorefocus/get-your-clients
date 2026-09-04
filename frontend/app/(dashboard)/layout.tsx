@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/features/layout/sidebar";
+import { MobileBottomNav } from "@/components/features/layout/mobile-bottom-nav";
+import { MobileDrawer } from "@/components/features/layout/mobile-drawer";
 import { CommandPalette } from "@/components/features/layout/command-palette";
 import { PageTransitionWrapper } from "@/components/features/layout/page-transition";
 import { useAuth } from "@/lib/hooks/use-auth";
@@ -31,9 +33,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden bg-surface">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden relative">
         <PageTransitionWrapper>{children}</PageTransitionWrapper>
+        <MobileBottomNav />
       </div>
+      <MobileDrawer />
       <CommandPalette />
     </div>
   );

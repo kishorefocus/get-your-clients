@@ -34,6 +34,8 @@ class KanbanClientItem(BaseModel):
     priority: str = "medium"
     nextFollowUp: str | None = None
     assignedRep: str | None = None
+    phone: str | None = None
+    email: str | None = None
 
     model_config = {"from_attributes": True}
 

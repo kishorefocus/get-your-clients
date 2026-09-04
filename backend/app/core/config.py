@@ -41,7 +41,12 @@ class Settings(BaseSettings):
 
     rate_limit_per_minute_default: int = 120
 
-    cors_origins: list[str] = ["http://localhost:3000","http://192.168.142.1:3000", "http://192.168.1.5:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://192.168.142.1:3000",
+        "http://192.168.1.5:3000",
+        "http://192.168.1.3:3000",
+    ]
 
 
 @lru_cache

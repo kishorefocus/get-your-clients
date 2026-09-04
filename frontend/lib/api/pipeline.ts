@@ -22,6 +22,12 @@ export interface KanbanClientItem {
   city: string | null;
   country: string | null;
   rating: number | null;
+  category?: string | null;
+  priority?: "low" | "medium" | "high" | string;
+  nextFollowUp?: string | null;
+  assignedRep?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface KanbanColumnResponse {

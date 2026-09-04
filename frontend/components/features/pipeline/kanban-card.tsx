@@ -10,12 +10,14 @@ import { cn, initials, formatCountryName } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
 import { staggerChild, tapProps, EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
+import { WhatsAppModal } from "@/components/features/pipeline/whatsapp-modal";
 
 const priorityColor = { low: "secondary", medium: "accent", high: "danger" } as const;
 
 export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolean }) {
   const prefersReduced = useReducedMotion();
   const [justDropped, setJustDropped] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
 
   // dnd-kit draggable setup (skipped for DragOverlay item to prevent duplicate key/node registration)
   const draggable = useDraggable({ id: lead.id, disabled: !!isOverlay });
@@ -72,14 +74,37 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
         )}
       </div>
 
-      {lead.assignedRep && (
-        <div className="flex items-center gap-1.5 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold">
-            {initials(lead.assignedRep)}
+      <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs text-muted-foreground gap-1.5">
+        {lead.assignedRep ? (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
+              {initials(lead.assignedRep)}
+            </div>
+            <span className="truncate max-w-[90px]">{lead.assignedRep}</span>
           </div>
-          <span className="truncate">{lead.assignedRep}</span>
-        </div>
-      )}
+        ) : (
+          <span className="text-[10px] text-muted-foreground/60 italic">Unassigned</span>
+        )}
+
+        {/* WhatsApp Button */}
+        {!isOverlay && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsWhatsAppOpen(true);
+            }}
+            title={`Outreach via WhatsApp to ${lead.name}`}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#25D366]/15 text-[#128C7E] dark:text-[#25D366] hover:bg-[#25D366]/25 hover:border-[#25D366]/50 transition-all border border-[#25D366]/30 shadow-xs cursor-pointer shrink-0 active:scale-95 ml-auto"
+          >
+            <svg className="h-3 w-3 fill-current shrink-0" viewBox="0 0 24 24">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.56 0 8.25 3.69 8.25 8.24 0 2.2-.86 4.28-2.42 5.83a8.21 8.21 0 0 1-5.83 2.42c-1.44 0-2.86-.38-4.11-1.11l-.3-.18-3.05.8 1.05-2.97-.2-.31a8.17 8.17 0 0 1-1.25-4.48c0-4.55 3.7-8.24 8.26-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.49-.4-.42-.56-.43h-.47c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.78 2.71 4.3 3.8.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.12-.23-.19-.48-.31z" />
+            </svg>
+            <span>WhatsApp</span>
+          </button>
+        )}
+      </div>
 
       {/* Confetti / celebration elements when card lands in Won */}
       {!isOverlay && lead.stage === "won" && justDropped && !prefersReduced && (
@@ -102,21 +127,31 @@ export function KanbanCard({ lead, isOverlay }: { lead: Lead; isOverlay?: boolea
   }
 
   return (
-    <motion.div
-      ref={draggable.setNodeRef}
-      style={style}
-      variants={staggerChild}
-      animate={justDropped && !prefersReduced ? { scale: [0.96, 1.02, 1] } : { scale: 1 }}
-      transition={{ duration: 0.3, ease: EASE_OUT }}
-      whileHover={draggable.isDragging ? {} : { y: -2, transition: { duration: 0.15 } }}
-      className={cn(
-        "rounded-md border bg-card p-3 shadow-subtle relative transition-shadow focus-within:ring-1 focus-within:ring-primary/40",
-        draggable.isDragging 
-          ? "opacity-40 border-primary/40 shadow-none" 
-          : "border-border hover:shadow-card"
+    <>
+      <motion.div
+        ref={draggable.setNodeRef}
+        style={style}
+        variants={staggerChild}
+        animate={justDropped && !prefersReduced ? { scale: [0.96, 1.02, 1] } : { scale: 1 }}
+        transition={{ duration: 0.3, ease: EASE_OUT }}
+        whileHover={draggable.isDragging ? {} : { y: -2, transition: { duration: 0.15 } }}
+        className={cn(
+          "rounded-md border bg-card p-3 shadow-subtle relative transition-shadow focus-within:ring-1 focus-within:ring-primary/40",
+          draggable.isDragging 
+            ? "opacity-40 border-primary/40 shadow-none" 
+            : "border-border hover:shadow-card"
+        )}
+      >
+        {cardContent}
+      </motion.div>
+
+      {!isOverlay && (
+        <WhatsAppModal
+          lead={lead}
+          isOpen={isWhatsAppOpen}
+          onClose={() => setIsWhatsAppOpen(false)}
+        />
       )}
-    >
-      {cardContent}
-    </motion.div>
+    </>
   );
 }

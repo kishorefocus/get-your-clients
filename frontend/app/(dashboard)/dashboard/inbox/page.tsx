@@ -91,7 +91,7 @@ export default function InboxPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Topbar title="Inbox" />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 pb-16 md:pb-0">
         <div className={cn("w-full md:w-auto", activeConversationId ? "hidden md:block" : "block")}>
           <ConversationList />
         </div>
