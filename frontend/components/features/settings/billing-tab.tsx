@@ -15,16 +15,16 @@ import { toast } from "sonner";
 
 const PADDLE_PRICE_IDS: Record<string, { month: string; year: string }> = {
   growth: {
-    month: "pri_01m15xs0trk9mmkrd5b7pfr5cw",
-    year: "pri_01m1676haan7wtzgnvbzv364yn",
+    month: "pri_01m1r1a65c5zs0efaepd859qzc",
+    year: "pri_01m1r1bka4d9bffhdgjvx57vzt",
   },
   pro: {
-    month: "pri_01m167efhpd1bhe9pfx24m8fcm",
-    year: "pri_01m167fp4ccv5svj2r01fnk7cr",
+    month: "pri_01m1r1ety36a39vypesfwgs06h",
+    year: "pri_01m1r1g39caxyvqv3t6x7n48n7",
   },
   enterprise: {
-    month: "pri_01m167hq9j3kncjcs4nfwv86y8",
-    year: "pri_01m167kab9hhetzkwbd96jsj28",
+    month: "pri_01m1r1hz75ksb64ngqd5p3rmg3",
+    year: "pri_01m1r1jwrv90j46envsptha4r6",
   },
 };
 
@@ -151,18 +151,18 @@ export function BillingTab() {
   const maxLeads = currentPlanKey === "free"
     ? 3
     : currentPlanKey === "growth"
-    ? 500
-    : currentPlanKey === "pro"
-    ? 5000
-    : 99999;
+      ? 500
+      : currentPlanKey === "pro"
+        ? 5000
+        : 99999;
 
   const maxSeats = currentPlanKey === "free"
     ? 1
     : currentPlanKey === "growth"
-    ? 3
-    : currentPlanKey === "pro"
-    ? 10
-    : 999;
+      ? 3
+      : currentPlanKey === "pro"
+        ? 10
+        : 999;
 
   const usage = [
     { label: "Seats", used: 1, limit: maxSeats },
@@ -189,11 +189,10 @@ export function BillingTab() {
             <button
               type="button"
               onClick={() => setBillingInterval("month")}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${
-                billingInterval === "month"
-                  ? "text-primary-foreground font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${billingInterval === "month"
+                ? "text-primary-foreground font-bold"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               {billingInterval === "month" && (
                 <motion.div
@@ -207,11 +206,10 @@ export function BillingTab() {
             <button
               type="button"
               onClick={() => setBillingInterval("year")}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${
-                billingInterval === "year"
-                  ? "text-primary-foreground font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${billingInterval === "year"
+                ? "text-primary-foreground font-bold"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               {billingInterval === "year" && (
                 <motion.div
@@ -247,13 +245,12 @@ export function BillingTab() {
                 key={plan.key}
                 variants={staggerChild}
                 {...cardHoverProps}
-                className={`relative flex flex-col justify-between rounded-xl border p-5 hover:shadow-card transition-shadow ${
-                  isCurrent
-                    ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]"
-                    : plan.popular
+                className={`relative flex flex-col justify-between rounded-xl border p-5 hover:shadow-card transition-shadow ${isCurrent
+                  ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]"
+                  : plan.popular
                     ? "border-primary/50 shadow-md shadow-primary/[0.02] bg-card"
                     : "border-border/60 bg-card"
-                }`}
+                  }`}
               >
                 {/* Popular badge */}
                 {plan.popular && !isCurrent && (
@@ -273,7 +270,7 @@ export function BillingTab() {
                   <div className="flex items-center justify-between">
                     <p className="font-display text-base font-extrabold text-foreground">{plan.name}</p>
                   </div>
-                  
+
                   {/* Dynamic Price Display */}
                   <div className="mt-2">
                     <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground">
