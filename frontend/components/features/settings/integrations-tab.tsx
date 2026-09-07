@@ -81,9 +81,17 @@ function GoogleMapsIntegrationCard() {
       }
     } catch (err: any) {
       toast.dismiss("gmaps-sync");
-      setErrorMessage({
-        message: err?.message || "Google Cloud authorization was cancelled or failed.",
-      });
+      const errMsg = err?.message || "";
+      if (errMsg.includes("access_denied") || errMsg.includes("verification") || errMsg.includes("403")) {
+        setErrorMessage({
+          message: "Google OAuth is in 'Testing' mode. Please add your email to 'Test users' in Google Cloud Console (OAuth consent screen), or paste your Google Maps API key manually below.",
+          console_url: "https://console.cloud.google.com/apis/credentials/consent",
+        });
+      } else {
+        setErrorMessage({
+          message: err?.message || "Google Cloud authorization was cancelled or failed.",
+        });
+      }
     } finally {
       setIsAutoConnecting(false);
     }
