@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     elasticsearch_url: str = "http://localhost:9200"
 
     google_maps_api_key: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
     gemini_api_key: str | None = None
 
     twilio_account_sid: str | None = None
@@ -43,6 +45,7 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = [
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://192.168.142.1:3000",
         "http://192.168.1.5:3000",
         "http://192.168.1.3:3000",

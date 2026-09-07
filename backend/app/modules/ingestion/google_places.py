@@ -338,18 +338,19 @@ async def _gemini_get_place_details(place_id: str) -> dict:
         return {}
 
 
-async def search_places(*, query: str, page_token: str | None = None) -> dict:
+async def search_places(*, query: str, page_token: str | None = None, api_key: str | None = None) -> dict:
     """One page of Places API (New) Text Search results for a category+location query, e.g. 'restaurants in Austin, TX'.
     Falls back to Gemini Flash on Google API key absence or API failure.
     """
-    if not settings.google_maps_api_key or settings.google_maps_api_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
+    effective_key = api_key or settings.google_maps_api_key
+    if not effective_key or effective_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
         logger.info("Using Gemini Flash search_places due to missing/dummy Google Maps API Key")
         return await _gemini_search_places(query=query, page_token=page_token)
 
     try:
         headers = {
             "Content-Type": "application/json",
-            "X-Goog-Api-Key": settings.google_maps_api_key,
+            "X-Goog-Api-Key": effective_key,
             "X-Goog-FieldMask": _FIELD_MASK,
         }
         body: dict = {"textQuery": query}
@@ -406,16 +407,17 @@ def place_to_client_fields(place: dict) -> dict:
 
 
 
-async def geocode_address(address: str) -> tuple[float, float] | None:
+async def geocode_address(address: str, api_key: str | None = None) -> tuple[float, float] | None:
     """Geocodes an address. Falls back to Gemini Flash on Google API key absence or API failure."""
-    if not settings.google_maps_api_key or settings.google_maps_api_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
+    effective_key = api_key or settings.google_maps_api_key
+    if not effective_key or effective_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
         logger.info("Using Gemini Flash geocode_address due to missing/dummy Google Maps API Key")
         return await _gemini_geocode_address(address)
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(
-                GEOCODE_URL, params={"address": address, "key": settings.google_maps_api_key}
+                GEOCODE_URL, params={"address": address, "key": effective_key}
             )
             response.raise_for_status()
             data = response.json()
@@ -430,9 +432,10 @@ async def geocode_address(address: str) -> tuple[float, float] | None:
         return await _gemini_geocode_address(address)
 
 
-async def get_place_details(place_id: str) -> dict:
+async def get_place_details(place_id: str, api_key: str | None = None) -> dict:
     """Fetches details for a specific Place ID. Falls back to Gemini Flash on Google API key absence, API failure, or gemini place ID."""
-    if place_id.startswith("gemini_") or not settings.google_maps_api_key or settings.google_maps_api_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
+    effective_key = api_key or settings.google_maps_api_key
+    if place_id.startswith("gemini_") or not effective_key or effective_key.startswith("AIzaSyC-PD9DhQX7DPV2ZeXFPZyekJ5UScKM74I"):
         logger.info("Using Gemini Flash get_place_details for place_id=%s", place_id)
         return await _gemini_get_place_details(place_id)
 
@@ -440,7 +443,7 @@ async def get_place_details(place_id: str) -> dict:
         url = f"https://places.googleapis.com/v1/places/{place_id}"
         params = {
             "fields": "addressComponents,location",
-            "key": settings.google_maps_api_key
+            "key": effective_key
         }
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.get(url, params=params)

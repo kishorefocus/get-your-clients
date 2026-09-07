@@ -10,10 +10,13 @@ import React, {
 import {
   login as apiLogin,
   register as apiRegister,
+  googleLogin as apiGoogleLogin,
   logout as apiLogout,
   me,
   LoginRequest,
   RegisterRequest,
+  GoogleAuthRequest,
+  GoogleAuthResponse,
   UserResponse,
 } from "@/lib/api/auth";
 import { getTokens } from "@/lib/api/client";
@@ -24,6 +27,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (payload: LoginRequest) => Promise<void>;
   register: (payload: RegisterRequest) => Promise<void>;
+  loginWithGoogle: (payload: GoogleAuthRequest) => Promise<GoogleAuthResponse>;
   logout: () => void;
 }
 
@@ -61,6 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
   }, []);
 
+  const loginWithGoogle = useCallback(async (payload: GoogleAuthRequest) => {
+    const res = await apiGoogleLogin(payload);
+    const userData = await me();
+    setUser(userData);
+    return res;
+  }, []);
+
   const logout = useCallback(() => {
     apiLogout();
     setUser(null);
@@ -75,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        loginWithGoogle,
         logout,
       }}
     >

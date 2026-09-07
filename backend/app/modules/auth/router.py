@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import hash_password, create_access_token, create_refresh_token
 from app.modules.auth.dependencies import CurrentUser, get_current_user, get_user_from_refresh_token
-from app.modules.auth.service import login, refresh, register_org
+from app.modules.auth.service import login, refresh, register_org, google_login_or_register
 from app.schemas.auth import (
     LoginRequest,
     RefreshRequest,
@@ -15,6 +15,8 @@ from app.schemas.auth import (
     UserResponse,
     VerifyInvitationResponse,
     AcceptInvitationRequest,
+    GoogleAuthRequest,
+    GoogleAuthResponse,
 )
 from app.models.user import User
 from app.models.invitation import Invitation
@@ -32,6 +34,12 @@ async def register(payload: RegisterOrgRequest, db: AsyncSession = Depends(get_d
 @router.post("/login", response_model=TokenPairResponse)
 async def login_route(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     return await login(db, payload)
+
+
+@router.post("/google", response_model=GoogleAuthResponse)
+async def google_auth_route(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    """Logs in or registers a user via Google OAuth (ID token or access token)."""
+    return await google_login_or_register(db, payload)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)

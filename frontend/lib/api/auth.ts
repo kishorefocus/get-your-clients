@@ -48,6 +48,29 @@ export async function login(payload: LoginRequest): Promise<TokenPair> {
   return data;
 }
 
+export interface GoogleAuthRequest {
+  credential?: string | null;
+  access_token?: string | null;
+  org_name?: string | null;
+}
+
+export interface GoogleAuthResponse extends TokenPair {
+  is_new_user: boolean;
+  has_maps_key: boolean;
+  email: string | null;
+  full_name: string | null;
+}
+
+export async function googleLogin(payload: GoogleAuthRequest): Promise<GoogleAuthResponse> {
+  const data = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google", {
+    method: "POST",
+    body: payload,
+    skipAuth: true,
+  });
+  setTokens(data.access_token, data.refresh_token);
+  return data;
+}
+
 export async function me(): Promise<UserResponse> {
   return apiFetch<UserResponse>("/api/v1/auth/me");
 }

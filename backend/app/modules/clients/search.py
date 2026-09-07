@@ -115,9 +115,13 @@ async def search_clients(
     if query.place_id:
         try:
             from app.modules.ingestion.google_places import get_place_details, extract_place_details
+            from app.models.organization import Organization
             from fastapi import HTTPException, status
+
+            org = await db.get(Organization, org_id)
+            org_maps_key = (org.settings or {}).get("google_maps_api_key") if org else None
             
-            details = await get_place_details(query.place_id)
+            details = await get_place_details(query.place_id, api_key=org_maps_key)
             plat, plng, pcity, pcountry = extract_place_details(details)
             if plat is not None and plng is not None:
                 resolved_lat = plat
@@ -252,10 +256,14 @@ async def search_clients(
         if search_query:
             try:
                 from app.modules.ingestion.google_places import search_places, place_to_client_fields
+                from app.models.organization import Organization
                 from datetime import datetime, timezone
 
-                # Fetch places (which calls Gemini Flash fallback because Google Maps API key is commented out in .env)
-                data = await search_places(query=search_query)
+                org = await db.get(Organization, org_id)
+                org_maps_key = (org.settings or {}).get("google_maps_api_key") if org else None
+
+                # Fetch places (uses organization's connected key if present, otherwise system or Gemini Flash fallback)
+                data = await search_places(query=search_query, api_key=org_maps_key)
                 places = data.get("places") or []
                 if places:
                     new_client_ids = []

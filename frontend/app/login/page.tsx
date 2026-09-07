@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { scaleIn, staggerContainer, staggerChild, springUI, EASE_OUT } from "@/lib/motion";
 import { useAuth } from "@/lib/hooks/use-auth";
+import { useGoogleAuth } from "@/lib/hooks/use-google-auth";
+import { GoogleButton } from "@/components/ui/google-button";
 import { ApiError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -150,7 +152,8 @@ function ChatDealCard({ deal, isActive }: { deal: typeof chatDeals[0]; isActive:
 export default function LoginPage() {
   const prefersReduced = useReducedMotion();
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
+  const { signInWithGoogle, isPrompting: isGooglePrompting } = useGoogleAuth();
   const emailId = useId();
   const passwordId = useId();
 
@@ -167,6 +170,22 @@ export default function LoginPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleGoogleSignIn = async () => {
+    setState("loading");
+    try {
+      const googleToken = await signInWithGoogle();
+      const res = await loginWithGoogle(googleToken);
+      setState("success");
+      toast.success(res.is_new_user ? "Welcome to GlobalReach!" : "Welcome back!");
+      setTimeout(() => router.push("/dashboard/discovery"), 1200);
+    } catch (err: any) {
+      setState("idle");
+      const msg = err?.message || "Google sign in failed. Please try again.";
+      setErrorMsg(msg);
+      toast.error(msg);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,8 +302,23 @@ export default function LoginPage() {
                     </p>
                   </motion.div>
 
+                  <motion.div variants={staggerChild} className="mt-6">
+                    <GoogleButton
+                      onClick={handleGoogleSignIn}
+                      isLoading={state === "loading" || isGooglePrompting}
+                      text="Continue with Google"
+                    />
+
+                    <div className="relative my-5 flex items-center justify-center">
+                      <div className="w-full border-t border-border" />
+                      <span className="bg-card px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground relative">
+                        or with email
+                      </span>
+                    </div>
+                  </motion.div>
+
                   <motion.form
-                    className="mt-6 space-y-4"
+                    className="space-y-4"
                     onSubmit={handleSubmit}
                     animate={
                       shake && !prefersReduced

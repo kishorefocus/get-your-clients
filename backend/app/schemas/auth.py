@@ -28,6 +28,19 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str | None = None  # Google JWT ID token
+    access_token: str | None = None  # Google OAuth2 access token
+    org_name: str | None = None
+
+
+class GoogleAuthResponse(TokenPairResponse):
+    is_new_user: bool = False
+    has_maps_key: bool = False
+    email: EmailStr | None = None
+    full_name: str | None = None
+
+
 class UserResponse(BaseModel):
     id: uuid.UUID
     org_id: uuid.UUID

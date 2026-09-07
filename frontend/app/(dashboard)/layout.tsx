@@ -9,6 +9,7 @@ import { CommandPalette } from "@/components/features/layout/command-palette";
 import { PageTransitionWrapper } from "@/components/features/layout/page-transition";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { UpgradeLockOverlay } from "@/components/features/subscription/upgrade-lock-overlay";
+import { GoogleMapsSetupBanner } from "@/components/features/settings/google-maps-setup-banner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -35,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-surface">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden relative">
+        <GoogleMapsSetupBanner />
         <PageTransitionWrapper>{children}</PageTransitionWrapper>
         <MobileBottomNav />
       </div>
