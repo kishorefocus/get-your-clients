@@ -51,6 +51,7 @@ class Settings(BaseSettings):
         "http://192.168.1.3:3000",
         "https://get-your-clients-production.up.railway.app",
         "https://get-your-clients-97p8.vercel.app",
+        "https://getyourclientsb2b.com"
     ]
 
 
