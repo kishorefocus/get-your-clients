@@ -1,7 +1,7 @@
 /**
  * lib/motion.ts
  * ─────────────────────────────────────────────────────────────────────────
- * Central animation library for GlobalReach CRM.
+ * Central animation library for GetYourClients CRM.
  * All Framer Motion variants live here — import from this file,
  * not per-component, so timing stays consistent everywhere.
  *

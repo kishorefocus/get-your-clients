@@ -25,7 +25,7 @@ const SEARCH_LIMIT = 3;
 
 function getStorageKey(userEmail: string | null): string {
   const safeId = userEmail ? userEmail.toLowerCase().replace(/[^a-z0-9]/g, "_") : "anonymous";
-  return `globalreach_search_limit_${safeId}`;
+  return `getyourclients_search_limit_${safeId}`;
 }
 
 interface StoredLimitData {
@@ -40,7 +40,9 @@ function loadFromStorage(userEmail: string | null): StoredLimitData {
     return { searchCount: 0, firstLimitReachedAt: null, isLocked: false };
   }
   try {
-    const raw = localStorage.getItem(getStorageKey(userEmail));
+    const key = getStorageKey(userEmail);
+    const legacyKey = `globalreach_search_limit_${userEmail ? userEmail.toLowerCase().replace(/[^a-z0-9]/g, "_") : "anonymous"}`;
+    const raw = localStorage.getItem(key) || localStorage.getItem(legacyKey);
     if (raw) {
       return JSON.parse(raw);
     }

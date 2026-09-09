@@ -205,7 +205,7 @@ export function InteractiveMap({
     tileLayerRef.current = layer;
   }, [theme]);
 
-  // Helper to create HTML icons matching GlobalReach's design system with category icons
+  // Helper to create HTML icons matching GetYourClients's design system with category icons
   const createIcon = (lead: Lead, isActive: boolean) => {
     const IconComponent = getIndustryIcon(lead.industry, lead.category);
     // Add explicit className width/height so global resets don't collapse the SVG to 0 width/height

@@ -121,8 +121,8 @@ export default function ClientProfilePage() {
   const handleOpenEmailModal = (email: string, name: string) => {
     setEmailTarget(email);
     setEmailTargetName(name);
-    setEmailSubject(`Outreach from GlobalReach: regarding your business`);
-    setEmailBody(`Hello ${name},\n\nI noticed your business on GlobalReach and wanted to connect.\n\nBest regards,\n${user?.full_name || "GlobalReach Sales Team"}`);
+    setEmailSubject(`Outreach from GetYourClients: regarding your business`);
+    setEmailBody(`Hello ${name},\n\nI noticed your business on GetYourClients and wanted to connect.\n\nBest regards,\n${user?.full_name || "GetYourClients Sales Team"}`);
     setIsEmailModalOpen(true);
   };
 

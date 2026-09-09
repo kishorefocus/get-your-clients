@@ -82,7 +82,7 @@ export function CommandPalette() {
             <kbd className="rounded border border-border px-1 py-0.5 text-[9px]">↵</kbd> select &nbsp;
             <kbd className="rounded border border-border px-1 py-0.5 text-[9px]">ESC</kbd> close
           </span>
-          <span className="manifest-chip">GlobalReach · CMD+K</span>
+          <span className="manifest-chip">GetYourClients · CMD+K</span>
         </div>
       </Command>
     </div>

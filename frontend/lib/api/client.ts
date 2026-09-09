@@ -1,5 +1,5 @@
 /**
- * Central fetch wrapper for the GlobalReach backend API.
+ * Central fetch wrapper for the GetYourClients backend API.
  *
  * - Prepends NEXT_PUBLIC_API_URL to every request.
  * - Attaches Authorization: Bearer <access_token> from localStorage.

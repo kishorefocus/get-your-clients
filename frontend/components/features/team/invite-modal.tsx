@@ -86,7 +86,7 @@ export function InviteModal({ open, onClose }: Props) {
           </div>
           <DialogTitle>Invite a teammate</DialogTitle>
           <DialogDescription>
-            They'll receive an email with a link to join your GlobalReach organisation.
+            They'll receive an email with a link to join your GetYourClients organisation.
           </DialogDescription>
         </DialogHeader>
 

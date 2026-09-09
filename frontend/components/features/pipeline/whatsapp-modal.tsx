@@ -45,7 +45,7 @@ export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
       setPhoneNumber(lead.phone || "");
       
       const templates: Record<string, string> = {
-        intro: `Hi ${lead.name}, I came across your business (${lead.category}) on GlobalReach. We help high-growth companies expand client acquisition. Would love to share a quick 2-minute overview with you!`,
+        intro: `Hi ${lead.name}, I came across your business (${lead.category}) on GetYourClients. We help high-growth companies expand client acquisition. Would love to share a quick 2-minute overview with you!`,
         followup: `Hi ${lead.name}, following up on our recent contact regarding client acquisition opportunities for your team. Are you available for a brief catch-up this week?`,
         demo: `Hi ${lead.name}, would you be open to a quick 10-minute demo this Thursday or Friday on how we can source verified leads for ${lead.name}? Let me know what time suits you best.`,
         custom: ""
@@ -60,7 +60,7 @@ export function WhatsAppModal({ lead, isOpen, onClose }: WhatsAppModalProps) {
   const handleTemplateChange = (tmplKey: string) => {
     setSelectedTemplate(tmplKey);
     const templates: Record<string, string> = {
-      intro: `Hi ${lead.name}, I came across your business (${lead.category}) on GlobalReach. We help high-growth companies expand client acquisition. Would love to share a quick 2-minute overview with you!`,
+      intro: `Hi ${lead.name}, I came across your business (${lead.category}) on GetYourClients. We help high-growth companies expand client acquisition. Would love to share a quick 2-minute overview with you!`,
       followup: `Hi ${lead.name}, following up on our recent contact regarding client acquisition opportunities for your team. Are you available for a brief catch-up this week?`,
       demo: `Hi ${lead.name}, would you be open to a quick 10-minute demo this Thursday or Friday on how we can source verified leads for ${lead.name}? Let me know what time suits you best.`,
       custom: message || `Hi ${lead.name}, `

@@ -50,7 +50,7 @@ export function ProfileTab() {
         </div>
         <div>
           <p className="text-sm font-semibold">{name}</p>
-          <p className="text-xs text-muted-foreground">Admin · GlobalReach Org</p>
+          <p className="text-xs text-muted-foreground">Admin · GetYourClients Org</p>
         </div>
       </motion.div>
 

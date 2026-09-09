@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -90,11 +91,11 @@ export function MobileDrawer() {
             {/* Header */}
             <div className="flex h-12 items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-tr from-blue-600 to-cyan-500 text-white shadow-md">
-                  <Globe2 className="h-4 w-4" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-md overflow-hidden shadow-md">
+                  <Image src="/images/logo_image.png" alt="GetYourClients" width={28} height={28} className="h-7 w-7 object-contain" />
                 </div>
                 <span className="font-display text-[17px] font-semibold text-white tracking-tight">
-                  GlobalReach
+                  GetYourClients
                 </span>
               </div>
               <Button

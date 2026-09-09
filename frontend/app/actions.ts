@@ -7,13 +7,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendTeammateInviteEmail(email: string, inviteUrl: string) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "GlobalReach <onboarding@resend.dev>",
+      from: "GetYourClients <onboarding@resend.dev>",
       to: email,
-      subject: "Join your team on GlobalReach",
+      subject: "Join your team on GetYourClients",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <h2 style="color: #2451FF; margin-top: 0;">Welcome to GlobalReach!</h2>
-          <p>You have been invited to join your teammate workspace on GlobalReach.</p>
+          <h2 style="color: #2451FF; margin-top: 0;">Welcome to GetYourClients!</h2>
+          <p>You have been invited to join your teammate workspace on GetYourClients.</p>
           <p>Click the link below to set up your account and get started:</p>
           <p style="margin: 24px 0;">
             <a href="${inviteUrl}" style="background-color: #2451FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Join Teammate Workspace</a>
@@ -39,7 +39,7 @@ export async function sendTeammateInviteEmail(email: string, inviteUrl: string) 
 export async function sendClientOutreachEmail(toEmail: string, subject: string, messageHtml: string) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "GlobalReach Outreach <onboarding@resend.dev>",
+      from: "GetYourClients Outreach <onboarding@resend.dev>",
       to: toEmail,
       subject: subject,
       html: `

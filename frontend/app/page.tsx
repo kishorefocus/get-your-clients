@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   Globe2, ArrowRight, MapPin, KanbanSquare, PhoneCall, Check,
@@ -201,7 +202,7 @@ const industries = [
 
 const testimonials = [
   {
-    quote: "GlobalReach helped us book 18 qualified meetings in our first month targeting the DACH region. The map view is genuinely game-changing.",
+    quote: "GetYourClients helped us book 18 qualified meetings in our first month targeting the DACH region. The map view is genuinely game-changing.",
     author: "Priya Nair",
     role: "Head of Sales, CloudAxis",
     flag: "🇩🇪",
@@ -217,7 +218,7 @@ const testimonials = [
     color: "bg-rose-500",
   },
   {
-    quote: "Outreach used to take us weeks to organise. With GlobalReach, our reps hit new markets in a single afternoon — and the response rates prove it.",
+    quote: "Outreach used to take us weeks to organise. With GetYourClients, our reps hit new markets in a single afternoon — and the response rates prove it.",
     author: "Amara Osei",
     role: "Business Dev Director, LinkForge",
     flag: "🇳🇬",
@@ -371,14 +372,14 @@ export default function LandingPage() {
       >
         <Link href="/" className="flex items-center gap-2.5 focus-visible:outline-ring">
           <motion.div
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_0_20px_hsl(228,100%,64%,0.4)]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-[0_0_20px_hsl(228,100%,64%,0.4)]"
             whileHover={{ scale: 1.08, rotate: -5 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Globe2 className="h-4.5 w-4.5" />
+            <Image src="/images/logo_image.png" alt="GetYourClients" width={32} height={32} className="h-8 w-8 object-contain" />
           </motion.div>
           <span className="font-display text-lg font-bold tracking-tight">
-            Global<span className="gradient-text">Reach</span>
+            GetYour<span className="gradient-text">Clients</span>
           </span>
         </Link>
 
@@ -447,7 +448,7 @@ export default function LandingPage() {
               variants={fadeUp}
               className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground"
             >
-              GlobalReach is the discovery and outreach CRM built for teams selling across borders.
+              GetYourClients is the discovery and outreach CRM built for teams selling across borders.
               Pinpoint leads by industry, country, and revenue — then message, call, and close them
               from one unified workspace.
             </motion.p>
@@ -516,7 +517,7 @@ export default function LandingPage() {
                     <p className="text-xs font-semibold truncate">Find your dream clients</p>
                     <p className="text-[10px] text-muted-foreground">Any country. Any industry. Any size.</p>
                   </div>
-                  <span className="shrink-0 deal-badge text-[10px]">GlobalReach</span>
+                  <span className="shrink-0 deal-badge text-[10px]">GetYourClients</span>
                 </motion.div>
               </div>
             </div>
@@ -553,7 +554,7 @@ export default function LandingPage() {
             <span className="gradient-text">four steps</span>
           </h2>
           <p className="mt-3 text-base text-muted-foreground max-w-xl mx-auto">
-            From cold market to signed contract — GlobalReach guides your team through every stage
+            From cold market to signed contract — GetYourClients guides your team through every stage
             of the international client acquisition journey.
           </p>
         </motion.div>
@@ -633,7 +634,7 @@ export default function LandingPage() {
                 <span className="gradient-text">across every industry</span>
               </h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md">
-                GlobalReach users are having real conversations with decision-makers around the world
+                GetYourClients users are having real conversations with decision-makers around the world
                 — and closing deals from their desk. Here's what it looks like in practice.
               </p>
 
@@ -707,7 +708,7 @@ export default function LandingPage() {
           </h2>
           <p className="mt-3 text-base text-muted-foreground max-w-lg mx-auto">
             Whether you're selling software to CTOs or sourcing suppliers for a supply chain —
-            GlobalReach has the data and tools for your sector.
+            GetYourClients has the data and tools for your sector.
           </p>
         </motion.div>
 
@@ -927,12 +928,12 @@ export default function LandingPage() {
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             {/* Brand */}
             <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <Globe2 className="h-4 w-4" />
+              <Link href="/" className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md overflow-hidden">
+                  <Image src="/images/logo_image.png" alt="GetYourClients" width={28} height={28} className="h-7 w-7 object-contain" />
                 </div>
-                <span className="font-display font-bold">Global<span className="gradient-text">Reach</span></span>
-              </div>
+                <span className="font-display font-bold">GetYour<span className="gradient-text">Clients</span></span>
+              </Link>
               <p className="mt-2 text-xs text-muted-foreground max-w-[200px]">
                 The global outreach CRM for ambitious sales teams.
               </p>
@@ -968,7 +969,7 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
-            <span>© 2026 GlobalReach, Inc. All rights reserved.</span>
+            <span>© 2026 GetYourClients, Inc. All rights reserved.</span>
             <span className="manifest-chip">BUILT FOR 190+ MARKETS</span>
           </div>
         </div>

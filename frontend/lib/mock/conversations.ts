@@ -213,7 +213,7 @@ export const mockConversations: Conversation[] = [
 ];
 
 export const cannedResponses = [
-  { label: "Intro greeting", text: "Hello! Thank you for connecting with us on GlobalReach. We'd love to explore a potential partnership." },
+  { label: "Intro greeting", text: "Hello! Thank you for connecting with us on GetYourClients. We'd love to explore a potential partnership." },
   { label: "Follow-up", text: "Just following up on my previous message — we are still very interested and happy to adjust our proposal." },
   { label: "Request catalogue", text: "Could you share your latest product catalogue and pricing sheet? We'll review and revert within 48 hours." },
   { label: "Schedule call", text: "Would you be available for a 20-minute call this week? Please share your preferred time and timezone." },

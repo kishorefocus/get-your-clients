@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -82,14 +83,14 @@ export function Sidebar() {
       )}>
         <div className="flex items-center gap-2.5 min-w-0">
           <motion.div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-tr from-blue-600 to-cyan-500 shadow-[0_0_12px_rgba(37,99,235,0.4)] text-white cursor-pointer"
-            whileHover={{ scale: 1.12, rotate: 360 }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md overflow-hidden shadow-[0_0_12px_rgba(37,99,235,0.4)] cursor-pointer"
+            whileHover={{ scale: 1.12 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
             onClick={() => isCollapsed && handleToggle()}
             title={isCollapsed ? "Expand Sidebar" : undefined}
           >
-            <Globe2 className="h-4 w-4" />
+            <Image src="/images/logo_image.png" alt="GetYourClients" width={28} height={28} className="h-7 w-7 object-contain" />
           </motion.div>
 
           <motion.span
@@ -101,7 +102,7 @@ export function Sidebar() {
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
             className="font-display text-[17px] font-semibold tracking-tight truncate overflow-hidden whitespace-nowrap bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent"
           >
-            GlobalReach
+            GetYourClients
           </motion.span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   Globe2, CheckCircle2, Shield, Building2, Eye, EyeOff
 } from "lucide-react";
@@ -177,7 +178,7 @@ export default function LoginPage() {
       const googleToken = await signInWithGoogle();
       const res = await loginWithGoogle(googleToken);
       setState("success");
-      toast.success(res.is_new_user ? "Welcome to GlobalReach!" : "Welcome back!");
+      toast.success(res.is_new_user ? "Welcome to GetYourClients!" : "Welcome back!");
       setTimeout(() => router.push("/dashboard/discovery"), 1200);
     } catch (err: any) {
       setState("idle");
@@ -232,14 +233,14 @@ export default function LoginPage() {
         <header className="relative flex items-center justify-between z-10 shrink-0">
           <Link href="/" className="flex items-center gap-2.5">
             <motion.div
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_0_20px_hsl(228,100%,64%,0.4)]"
+              className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-[0_0_20px_hsl(228,100%,64%,0.4)]"
               whileHover={{ scale: 1.08, rotate: -5 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Globe2 className="h-4.5 w-4.5" />
+              <Image src="/images/logo_image.png" alt="GetYourClients" width={32} height={32} className="h-8 w-8 object-contain" />
             </motion.div>
             <span className="font-display text-lg font-bold tracking-tight text-foreground">
-              Global<span className="gradient-text font-bold">Reach</span>
+              GetYour<span className="gradient-text font-bold">Clients</span>
             </span>
           </Link>
           <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -418,7 +419,7 @@ export default function LoginPage() {
                     variants={staggerChild}
                     className="mt-6 text-center text-xs text-muted-foreground"
                   >
-                    New to GlobalReach?{" "}
+                    New to GetYourClients?{" "}
                     <Link href="/signup" className="text-primary hover:underline font-semibold">
                       Create an account
                     </Link>
@@ -442,7 +443,7 @@ export default function LoginPage() {
             </span>
           </div>
           <div>
-            © {new Date().getFullYear()} GlobalReach
+            © {new Date().getFullYear()} GetYourClients
           </div>
         </footer>
       </main>
@@ -471,7 +472,7 @@ export default function LoginPage() {
               <span className="h-2 w-2 rounded-full bg-danger/70 animate-pulse" />
               <span className="h-2 w-2 rounded-full bg-accent/70" />
               <span className="h-2 w-2 rounded-full bg-success/70" />
-              <span className="ml-2 font-mono text-[10px] text-slate-400">globalreach — 12 leads plotted</span>
+              <span className="ml-2 font-mono text-[10px] text-slate-400">getyourclients — 12 leads plotted</span>
             </div>
 
             <div className="mt-3 flex-1 bg-slate-950/40 rounded-xl overflow-hidden relative z-0">

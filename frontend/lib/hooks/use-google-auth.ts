@@ -73,7 +73,7 @@ export function useGoogleAuth() {
       // Informative demo / dev option
       const devConsent = window.confirm(
         "NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured in .env.local yet.\n\n" +
-        "Would you like to test with a simulated Google Developer account (dev@globalreach.io) for local testing?"
+        "Would you like to test with a simulated Google Developer account (dev@getyourclients.com) for local testing?"
       );
       if (devConsent) {
         return {

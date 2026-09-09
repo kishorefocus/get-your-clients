@@ -25,14 +25,22 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GlobalReach — Find your next client, anywhere",
+  title: "GetYourClients — Find your next client, anywhere",
   description:
-    "GlobalReach is the B2B discovery and outreach CRM for teams selling across borders: search leads by industry and country, work them on a map, and run outreach from one dashboard.",
+    "GetYourClients is the B2B discovery and outreach CRM for teams selling across borders: search leads by industry and country, work them on a map, and run outreach from one dashboard.",
+  icons: {
+    icon: "/images/logo_image.png",
+    shortcut: "/images/logo_image.png",
+    apple: "/images/logo_image.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/images/logo_image.png" />
+      </head>
       <body className={`${fraunces.variable} ${inter.variable} ${plexMono.variable}`}>
         <Providers>{children}</Providers>
       </body>
