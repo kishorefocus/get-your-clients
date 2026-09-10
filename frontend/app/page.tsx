@@ -229,23 +229,40 @@ const testimonials = [
 
 const tiers = [
   {
-    name: "Starter",
-    price: "$49",
-    period: "/rep/mo",
-    features: ["500 lead searches/mo", "1 pipeline board", "Email + chat outreach", "Basic analytics"],
+    name: "Free",
+    price: "$0",
+    period: "/month",
+    features: ["3 free verified leads", "1 team seat", "Basic searches", "Standard CRM pipeline"],
+    cta: "Start Free",
+    href: "/signup",
+    featured: false,
   },
   {
     name: "Growth",
-    price: "$129",
-    period: "/rep/mo",
-    features: ["Unlimited searches", "Unlimited boards", "Voice calling", "Team analytics", "Priority support"],
+    price: "$19",
+    period: "/month",
+    features: ["500 leads / month", "3 seats included", "Standard AI Discovery", "Email outreach suite", "Standard analytics"],
+    cta: "Choose Growth",
+    href: "/signup?plan=growth",
+    featured: false,
+  },
+  {
+    name: "Pro",
+    price: "$49",
+    period: "/month",
+    features: ["Unlimited leads", "10 seats included", "AI Persona Discovery", "Call + email outreach", "Full analytics & priority support"],
+    cta: "Upgrade to Pro",
+    href: "/signup?plan=pro",
     featured: true,
   },
   {
     name: "Enterprise",
-    price: "Custom",
-    period: "",
-    features: ["SSO & role controls", "Dedicated onboarding", "API & data exports", "Custom integrations"],
+    price: "$149",
+    period: "/month",
+    features: ["Unlimited everything", "Unlimited team seats", "Custom API Integrations", "Dedicated manager", "SSO & 99.9% SLA"],
+    cta: "Choose Enterprise",
+    href: "/signup?plan=enterprise",
+    featured: false,
   },
 ];
 
@@ -388,6 +405,8 @@ export default function LandingPage() {
             { label: "Product", href: "#product" },
             { label: "How It Works", href: "#how-it-works" },
             { label: "Industries", href: "#industries" },
+            { label: "Pricing", href: "/pricing" },
+            { label: "Contact", href: "/contact" },
           ].map((item) => (
             <motion.a
               key={item.label}
@@ -867,6 +886,92 @@ export default function LandingPage() {
       </section>
 
 
+      {/* ══════════════════ PRICING TIERS ══════════════════ */}
+      <section id="pricing" className="border-t border-border bg-surface/40 py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <motion.div
+            className="text-center max-w-3xl mx-auto"
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
+            viewport={{ once: true }}
+          >
+            <span className="manifest-chip">TRANSPARENT PRICING</span>
+            <h2 className="mt-4 font-display text-4xl font-bold tracking-tight">
+              Predictable pricing for <span className="gradient-text">every team</span>
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              All plans include global data coverage and pipeline CRM. Billed securely via Paddle.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {tiers.map((tier) => (
+              <motion.div
+                key={tier.name}
+                variants={fadeUp}
+                className={cn(
+                  "relative flex flex-col rounded-2xl border p-6 bg-card transition-all duration-200",
+                  tier.featured
+                    ? "border-primary shadow-xl shadow-primary/10 ring-1 ring-primary"
+                    : "border-border shadow-subtle hover:border-border/80"
+                )}
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2, ease: EASE_OUT }}
+              >
+                {tier.featured && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground shadow-sm">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-display text-xl font-bold">{tier.name}</h3>
+                  <div className="mt-4 flex items-baseline">
+                    <span className="font-display text-4xl font-extrabold tracking-tight">{tier.price}</span>
+                    <span className="ml-1 text-xs text-muted-foreground">{tier.period}</span>
+                  </div>
+                </div>
+
+                <ul className="mt-6 space-y-2.5 text-xs text-muted-foreground flex-1 border-t border-border pt-6">
+                  {tier.features.map((feat) => (
+                    <li key={feat} className="flex items-start gap-2">
+                      <Check className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-8 pt-4">
+                  <Link href={tier.href} className="block w-full">
+                    <Button
+                      variant={tier.featured ? "default" : "outline"}
+                      className={cn("w-full font-semibold", tier.featured && "shadow-md shadow-primary/20")}
+                    >
+                      {tier.cta}
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <div className="mt-10 text-center">
+            <Link href="/pricing" className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1">
+              Compare all features and annual discounts <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ══════════════════ FINAL CTA BANNER ══════════════════ */}
       <section className="px-6 py-6">
         <motion.div
@@ -944,33 +1049,39 @@ export default function LandingPage() {
               <div>
                 <p className="font-semibold mb-3">Product</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  {["Features", "Changelog", "Roadmap"].map((l) => (
-                    <li key={l}><a href="#" className="hover:text-foreground transition-colors">{l}</a></li>
-                  ))}
+                  <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing &amp; Plans</Link></li>
+                  <li><a href="#product" className="hover:text-foreground transition-colors">Global Discovery</a></li>
+                  <li><a href="#how-it-works" className="hover:text-foreground transition-colors">Pipeline Engine</a></li>
+                  <li><a href="#industries" className="hover:text-foreground transition-colors">Industries</a></li>
                 </ul>
               </div>
               <div>
                 <p className="font-semibold mb-3">Company</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  {["About", "Blog", "Careers", "Contact"].map((l) => (
-                    <li key={l}><a href="#" className="hover:text-foreground transition-colors">{l}</a></li>
-                  ))}
+                  <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact Us</Link></li>
+                  <li><a href="mailto:support@getyourclientsb2b.com" className="hover:text-foreground transition-colors">support@getyourclientsb2b.com</a></li>
+                  <li><Link href="/login" className="hover:text-foreground transition-colors">Client Portal</Link></li>
                 </ul>
               </div>
               <div>
                 <p className="font-semibold mb-3">Legal</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  {["Privacy", "Terms", "Security", "GDPR"].map((l) => (
-                    <li key={l}><a href="#" className="hover:text-foreground transition-colors">{l}</a></li>
-                  ))}
+                  <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+                  <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+                  <li><Link href="/refund" className="hover:text-foreground transition-colors">Refund &amp; Cancellation</Link></li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row">
-            <span>© 2026 GetYourClients, Inc. All rights reserved.</span>
-            <span className="manifest-chip">BUILT FOR 190+ MARKETS</span>
+          <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p>© 2026 GetYourClients, Inc. All rights reserved.</p>
+              <p className="text-[11px] text-muted-foreground/80">
+                Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns.
+              </p>
+            </div>
+            <span className="manifest-chip shrink-0 self-start sm:self-center">BUILT FOR 190+ MARKETS</span>
           </div>
         </div>
       </footer>

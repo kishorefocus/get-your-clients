@@ -11,7 +11,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_NAME: "GetYourClients",
     //http://192.168.1.5:8001
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://get-your-clients-production.up.railway.app",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://api.getyourclientsb2b.com",
   },
 };
 

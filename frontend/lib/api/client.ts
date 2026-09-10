@@ -9,7 +9,7 @@
 
 const BASE_URL =
   //http://192.168.1.5:8001
-  process.env.NEXT_PUBLIC_API_URL || "https://get-your-clients-production.up.railway.app";
+  process.env.NEXT_PUBLIC_API_URL || "https://api.getyourclientsb2b.com";
 
 export class ApiError extends Error {
   constructor(
