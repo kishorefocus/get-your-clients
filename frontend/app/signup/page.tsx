@@ -438,6 +438,20 @@ export default function SignupPage() {
                       Log in
                     </Link>
                   </motion.p>
+
+                  <motion.p
+                    variants={staggerChild}
+                    className="mt-4 text-center text-[11px] text-muted-foreground leading-relaxed"
+                  >
+                    By creating an account, you agree to our{" "}
+                    <Link href="/terms" className="text-primary hover:underline underline-offset-2">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="text-primary hover:underline underline-offset-2">
+                      Privacy Policy
+                    </Link>.
+                  </motion.p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -456,8 +470,16 @@ export default function SignupPage() {
               GDPR Compliant
             </span>
           </div>
-          <div>
-            © {new Date().getFullYear()} GetYourClients
+          <div className="flex items-center gap-2.5">
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+            <span>·</span>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
+            </Link>
+            <span>·</span>
+            <span>© {new Date().getFullYear()} GetYourClients</span>
           </div>
         </footer>
       </main>

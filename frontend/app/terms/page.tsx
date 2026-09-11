@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { MarketingNavbar } from "@/components/marketing/marketing-navbar";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Terms of Service — GetYourClients",
+  description: "Review the GetYourClients Terms of Service governing platform usage, subscriptions, billing, and compliance.",
+};
 
 export default function TermsPage() {
   const lastUpdated = "September 10, 2026";
@@ -20,6 +26,25 @@ export default function TermsPage() {
             <p className="mt-2 text-xs text-muted-foreground">
               Last updated: {lastUpdated} · Effective immediately
             </p>
+
+            {/* Legal Navigation Tabs */}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold bg-primary text-primary-foreground shadow-sm">
+                Terms of Service
+              </span>
+              <Link
+                href="/privacy"
+                className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-border/50"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/refund"
+                className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-border/50"
+              >
+                Refund & Cancellation
+              </Link>
+            </div>
           </div>
 
           {/* Document Content */}

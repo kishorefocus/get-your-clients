@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { MarketingNavbar } from "@/components/marketing/marketing-navbar";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy — GetYourClients",
+  description: "Read the GetYourClients Privacy Policy. Learn how we collect, handle, and safeguard your data under GDPR & CCPA.",
+};
 
 export default function PrivacyPage() {
   const lastUpdated = "September 10, 2026";
@@ -20,6 +26,25 @@ export default function PrivacyPage() {
             <p className="mt-2 text-xs text-muted-foreground">
               Last updated: {lastUpdated} · GDPR &amp; CCPA Compliant
             </p>
+
+            {/* Legal Navigation Tabs */}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-semibold bg-primary text-primary-foreground shadow-sm">
+                Privacy Policy
+              </span>
+              <Link
+                href="/terms"
+                className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-border/50"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                href="/refund"
+                className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors border border-border/50"
+              >
+                Refund & Cancellation
+              </Link>
+            </div>
           </div>
 
           {/* Policy Body */}
