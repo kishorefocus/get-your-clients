@@ -53,6 +53,7 @@ class Settings(BaseSettings):
         "https://get-your-clients-97p8.vercel.app",
         "https://getyourclientsb2b.com",
         "https://www.getyourclientsb2b.com",
+        "https://app.getyourclientsb2b.com"
     ]
 
 
