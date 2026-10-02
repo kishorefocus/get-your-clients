@@ -35,9 +35,8 @@ class Settings(BaseSettings):
     stripe_publishable_key: str | None = None
     stripe_webhook_secret: str | None = None
 
-    paddle_api_key: str | None = None
-    paddle_webhook_secret: str | None = None
-    paddle_environment: str = "sandbox"
+    razorpay_key_id: str | None = None
+    razorpay_key_secret: str | None = None
 
 
 

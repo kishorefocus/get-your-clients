@@ -901,7 +901,7 @@ export default function LandingPage() {
               Predictable pricing for <span className="gradient-text">every team</span>
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              All plans include global data coverage and pipeline CRM. Billed securely via Paddle.
+              All plans include global data coverage and pipeline CRM. Billed securely via Razorpay.
             </p>
           </motion.div>
 
@@ -1078,7 +1078,7 @@ export default function LandingPage() {
             <div className="space-y-1">
               <p>© 2026 GetYourClients, Inc. All rights reserved.</p>
               <p className="text-[11px] text-muted-foreground/80">
-                Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns.
+                Payments are securely processed by Razorpay. All transactions are PCI-DSS compliant and encrypted with 256-bit SSL.
               </p>
             </div>
             <span className="manifest-chip shrink-0 self-start sm:self-center">BUILT FOR 190+ MARKETS</span>

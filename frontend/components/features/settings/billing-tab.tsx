@@ -1,33 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMyOrg } from "@/lib/hooks/use-org";
-import { useSubscribe, useCancelSubscription, useSubscriptionStatus } from "@/lib/hooks/use-subscription";
+import { useCancelSubscription, useSubscriptionStatus } from "@/lib/hooks/use-subscription";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { initializePaddle } from "@paddle/paddle-js";
+import { RazorpayButton, RAZORPAY_PLAN_PRICES } from "@/components/features/subscription/razorpay-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Check, Loader2, FileText, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerChild, cardHoverProps } from "@/lib/motion";
-import { toast } from "sonner";
-
-const PADDLE_PRICE_IDS: Record<string, { month: string; year: string }> = {
-  growth: {
-    month: "pri_01m1r1a65c5zs0efaepd859qzc",
-    year: "pri_01m1r1bka4d9bffhdgjvx57vzt",
-  },
-  pro: {
-    month: "pri_01m1r1ety36a39vypesfwgs06h",
-    year: "pri_01m1r1g39caxyvqv3t6x7n48n7",
-  },
-  enterprise: {
-    month: "pri_01m1r1hz75ksb64ngqd5p3rmg3",
-    year: "pri_01m1r1jwrv90j46envsptha4r6",
-  },
-};
-
+import { useQueryClient } from "@tanstack/react-query";
+import { SUB_KEYS } from "@/lib/hooks/use-subscription";
+import { ORG_KEYS } from "@/lib/hooks/use-org";
 
 const planList = [
   {
@@ -41,103 +27,48 @@ const planList = [
   {
     key: "growth",
     name: "Growth",
-    monthlyPrice: 19,
-    yearlyPrice: 15,
+    monthlyPrice: 1900,
+    yearlyPrice: 1500,
     features: ["500 leads/mo", "3 seats", "Standard AI Discovery", "Email outreach", "Standard analytics"],
     popular: false,
   },
   {
     key: "pro",
     name: "Pro",
-    monthlyPrice: 49,
-    yearlyPrice: 39,
+    monthlyPrice: 4900,
+    yearlyPrice: 3900,
     features: ["Unlimited leads", "10 seats", "AI Persona Discovery", "Call + email outreach", "Full analytics"],
     popular: true,
   },
   {
     key: "enterprise",
     name: "Enterprise",
-    monthlyPrice: 149,
-    yearlyPrice: 119,
+    monthlyPrice: 14900,
+    yearlyPrice: 11900,
     features: ["Unlimited everything", "Unlimited seats", "Custom API Integrations", "Dedicated manager", "SSO"],
     popular: false,
   },
 ];
 
 const invoices = [
-  { id: "INV-2026-08", date: "Aug 1, 2026", amount: "$49.00", status: "Paid" },
-  { id: "INV-2026-07", date: "Jul 1, 2026", amount: "$49.00", status: "Paid" },
+  { id: "INV-2026-08", date: "Aug 1, 2026", amount: "₹4,900", status: "Paid" },
+  { id: "INV-2026-07", date: "Jul 1, 2026", amount: "₹4,900", status: "Paid" },
 ];
 
 export function BillingTab() {
   const { user } = useAuth();
   const { data: org, isLoading: isOrgLoading } = useMyOrg();
   const { data: subscription, isLoading: isSubLoading } = useSubscriptionStatus();
-  const subscribeMutation = useSubscribe();
   const cancelMutation = useCancelSubscription();
+  const qc = useQueryClient();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
-  const [paddle, setPaddle] = useState<any>(null);
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState<string | null>(null);
 
   const currentPlanKey = org?.plan || "free";
   const isLoading = isOrgLoading || isSubLoading;
 
-  useEffect(() => {
-    initializePaddle({
-      environment: (process.env.NEXT_PUBLIC_PADDLE_ENV as "sandbox" | "production") || "sandbox",
-      token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
-      eventCallback: (event) => {
-        if (event.name === "checkout.completed") {
-          const transactionId = event.data?.transaction_id;
-          const plan = (event.data?.custom_data as any)?.plan || "growth";
-          window.location.href = `/success?transaction_id=${transactionId}&plan=${plan}`;
-        }
-      }
-    }).then((paddleInstance) => {
-      if (paddleInstance) {
-        setPaddle(paddleInstance);
-      }
-    });
-  }, []);
-
-  const handleAction = async (planKey: string) => {
-    if (planKey === "free") {
-      if (confirm("Are you sure you want to cancel your subscription and return to the Free plan? You will only see 3 lead details.")) {
-        cancelMutation.mutate();
-      }
-    } else {
-      const priceId = PADDLE_PRICE_IDS[planKey]?.[billingInterval];
-      if (!priceId) {
-        toast.error("Invalid plan or billing interval.");
-        return;
-      }
-      if (!paddle) {
-        toast.error("Paddle is not ready yet. Please try again in a moment.");
-        return;
-      }
-      try {
-        setIsCheckoutLoading(planKey);
-        localStorage.setItem("pending_plan", planKey);
-        paddle.Checkout.open({
-          items: [
-            {
-              priceId: priceId,
-              quantity: 1,
-            },
-          ],
-          customer: user?.email ? { email: user.email } : undefined,
-          customData: {
-            org_id: user?.org_id || "",
-            user_id: user?.id || "",
-            plan: planKey,
-          },
-        });
-      } catch (err: any) {
-        toast.error(err.message || "Failed to open checkout overlay.");
-      } finally {
-        setIsCheckoutLoading(null);
-      }
-    }
+  const handlePaymentSuccess = (plan: string) => {
+    qc.invalidateQueries({ queryKey: SUB_KEYS.status });
+    qc.invalidateQueries({ queryKey: ORG_KEYS.me });
   };
 
   if (isLoading) {
@@ -148,21 +79,10 @@ export function BillingTab() {
     );
   }
 
-  const maxLeads = currentPlanKey === "free"
-    ? 3
-    : currentPlanKey === "growth"
-      ? 500
-      : currentPlanKey === "pro"
-        ? 5000
-        : 99999;
-
-  const maxSeats = currentPlanKey === "free"
-    ? 1
-    : currentPlanKey === "growth"
-      ? 3
-      : currentPlanKey === "pro"
-        ? 10
-        : 999;
+  const maxLeads =
+    currentPlanKey === "free" ? 3 : currentPlanKey === "growth" ? 500 : currentPlanKey === "pro" ? 5000 : 99999;
+  const maxSeats =
+    currentPlanKey === "free" ? 1 : currentPlanKey === "growth" ? 3 : currentPlanKey === "pro" ? 10 : 999;
 
   const usage = [
     { label: "Seats", used: 1, limit: maxSeats },
@@ -181,18 +101,19 @@ export function BillingTab() {
         <div className="flex flex-col items-center justify-between gap-4 mb-8 sm:flex-row">
           <div>
             <h3 className="text-base font-bold text-foreground">Choose your subscription plan</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Scale your CRM as your outbound pipeline grows.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Scale your CRM as your outbound pipeline grows. Prices in INR.
+            </p>
           </div>
 
-          {/* Premium Billing Interval Toggle */}
+          {/* Billing Interval Toggle */}
           <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 w-fit">
             <button
               type="button"
               onClick={() => setBillingInterval("month")}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${billingInterval === "month"
-                ? "text-primary-foreground font-bold"
-                : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${
+                billingInterval === "month" ? "text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               {billingInterval === "month" && (
                 <motion.div
@@ -206,10 +127,9 @@ export function BillingTab() {
             <button
               type="button"
               onClick={() => setBillingInterval("year")}
-              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${billingInterval === "year"
-                ? "text-primary-foreground font-bold"
-                : "text-muted-foreground hover:text-foreground"
-                }`}
+              className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all relative ${
+                billingInterval === "year" ? "text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               {billingInterval === "year" && (
                 <motion.div
@@ -233,11 +153,8 @@ export function BillingTab() {
           {planList.map((plan) => {
             const isCurrent =
               currentPlanKey === plan.key &&
-              (plan.key === "free" ||
-                (subscription?.billing_interval || "month") === billingInterval);
-            const isUpgrading = isCheckoutLoading === plan.key;
+              (plan.key === "free" || (subscription?.billing_interval || "month") === billingInterval);
             const isCancelling = cancelMutation.isPending && plan.key === "free";
-
             const activePrice = billingInterval === "month" ? plan.monthlyPrice : plan.yearlyPrice;
 
             return (
@@ -245,12 +162,13 @@ export function BillingTab() {
                 key={plan.key}
                 variants={staggerChild}
                 {...cardHoverProps}
-                className={`relative flex flex-col justify-between rounded-xl border p-5 hover:shadow-card transition-shadow ${isCurrent
-                  ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]"
-                  : plan.popular
+                className={`relative flex flex-col justify-between rounded-xl border p-5 hover:shadow-card transition-shadow ${
+                  isCurrent
+                    ? "border-primary ring-2 ring-primary/20 bg-primary/[0.01]"
+                    : plan.popular
                     ? "border-primary/50 shadow-md shadow-primary/[0.02] bg-card"
                     : "border-border/60 bg-card"
-                  }`}
+                }`}
               >
                 {/* Popular badge */}
                 {plan.popular && !isCurrent && (
@@ -271,15 +189,15 @@ export function BillingTab() {
                     <p className="font-display text-base font-extrabold text-foreground">{plan.name}</p>
                   </div>
 
-                  {/* Dynamic Price Display */}
+                  {/* Price */}
                   <div className="mt-2">
                     <p className="font-mono text-2xl font-extrabold tracking-tight text-foreground">
-                      ${activePrice}
-                      <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                      {activePrice === 0 ? "Free" : `₹${activePrice.toLocaleString("en-IN")}`}
+                      {activePrice > 0 && <span className="text-xs font-normal text-muted-foreground">/mo</span>}
                     </p>
                     {billingInterval === "year" && activePrice > 0 && (
                       <p className="text-[10px] text-emerald-500 font-medium mt-0.5">
-                        Billed annually (${activePrice * 12}/yr)
+                        Billed annually (₹{(activePrice * 12).toLocaleString("en-IN")}/yr)
                       </p>
                     )}
                   </div>
@@ -295,30 +213,19 @@ export function BillingTab() {
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-border/40">
-                  {!isCurrent ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={plan.popular ? "default" : "outline"}
-                      className="w-full text-xs font-semibold"
-                      onClick={() => handleAction(plan.key)}
-                      disabled={!!isCheckoutLoading || cancelMutation.isPending}
-                    >
-                      {isUpgrading ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        plan.key === "enterprise" ? "Contact sales" : "Upgrade"
-                      )}
-                    </Button>
-                  ) : (
-                    plan.key !== "free" && (
+                  {isCurrent ? (
+                    plan.key !== "free" ? (
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
                         className="w-full text-xs text-danger hover:bg-danger/10"
-                        onClick={() => handleAction("free")}
-                        disabled={!!isCheckoutLoading || cancelMutation.isPending}
+                        onClick={() => {
+                          if (confirm("Are you sure you want to cancel your subscription and return to the Free plan?")) {
+                            cancelMutation.mutate();
+                          }
+                        }}
+                        disabled={cancelMutation.isPending}
                       >
                         {isCancelling ? (
                           <Loader2 className="h-3 w-3 animate-spin text-danger" />
@@ -326,7 +233,39 @@ export function BillingTab() {
                           "Cancel Subscription"
                         )}
                       </Button>
-                    )
+                    ) : null
+                  ) : plan.key === "free" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs font-semibold"
+                      onClick={() => {
+                        if (confirm("Downgrade to the Free plan? Your subscription will be cancelled.")) {
+                          cancelMutation.mutate();
+                        }
+                      }}
+                      disabled={cancelMutation.isPending}
+                    >
+                      {cancelMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Downgrade to Free"}
+                    </Button>
+                  ) : (
+                    /* Paid plan – Razorpay checkout */
+                    <RazorpayButton
+                      plan={plan.key}
+                      interval={billingInterval}
+                      amountInRupees={activePrice}
+                      userEmail={user?.email}
+                      userName={user?.full_name || user?.email}
+                      onSuccess={handlePaymentSuccess}
+                      className={`w-full flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-semibold transition-all
+                        ${plan.popular
+                          ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                          : "border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                        }`}
+                    >
+                      Upgrade to {plan.name}
+                    </RazorpayButton>
                   )}
                 </div>
               </motion.div>
@@ -359,14 +298,19 @@ export function BillingTab() {
           <h3 className="mb-3 text-sm font-semibold text-foreground">Invoice history</h3>
           <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-sm">
             {invoices.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between border-b border-border/40 last:border-b-0 px-4 py-3 bg-card/65">
+              <div
+                key={inv.id}
+                className="flex items-center justify-between border-b border-border/40 last:border-b-0 px-4 py-3 bg-card/65"
+              >
                 <div>
                   <p className="text-sm font-mono font-semibold text-foreground">{inv.id}</p>
                   <p className="text-[11px] text-muted-foreground">{inv.date}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm text-foreground">{inv.amount}</span>
-                  <Badge variant="success" className="text-[10px]">{inv.status}</Badge>
+                  <Badge variant="success" className="text-[10px]">
+                    {inv.status}
+                  </Badge>
                   <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs px-2 hover:bg-muted/65">
                     <FileText className="h-3 w-3" /> PDF
                   </Button>

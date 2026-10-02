@@ -26,8 +26,9 @@ class Subscription(UUIDPKMixin, TimestampMixin, Base):
     plan: Mapped[str] = mapped_column(String(50), default="free", nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    paddle_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    paddle_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Razorpay identifiers (replaces the former paddle_* columns)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    razorpay_order_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     billing_interval: Mapped[str] = mapped_column(String(20), default="month", nullable=False)
 
     organization: Mapped["Organization"] = relationship(back_populates="subscription")

@@ -28,7 +28,7 @@ export function MarketingFooter() {
             </p>
             <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/50 rounded-lg px-2.5 py-1.5 border border-border/60 w-fit">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <span>Payments & invoices processed securely by <strong>Paddle</strong></span>
+              <span>Payments processed securely by <strong>Razorpay</strong></span>
             </div>
           </div>
 
@@ -109,7 +109,7 @@ export function MarketingFooter() {
           <div className="space-y-1">
             <p>© {new Date().getFullYear()} GetYourClients, Inc. All rights reserved.</p>
             <p className="text-[11px] text-muted-foreground/80">
-              Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns.
+                Payments are securely processed by Razorpay — India's leading payment gateway. All transactions are PCI-DSS compliant and encrypted.
             </p>
           </div>
           <span className="manifest-chip shrink-0 self-start sm:self-center">

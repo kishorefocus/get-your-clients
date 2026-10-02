@@ -20,35 +20,20 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useMyOrg } from "@/lib/hooks/use-org";
-import { useSubscribe, useSubscriptionStatus } from "@/lib/hooks/use-subscription";
+import { useSubscriptionStatus } from "@/lib/hooks/use-subscription";
 import { useSearchLimitStore } from "@/lib/stores/search-limit-store";
-import { initializePaddle } from "@paddle/paddle-js";
+import { RazorpayButton, RAZORPAY_PLAN_PRICES } from "./razorpay-button";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { ORG_KEYS } from "@/lib/hooks/use-org";
 import { SUB_KEYS } from "@/lib/hooks/use-subscription";
 
-const PADDLE_PRICE_IDS: Record<string, { month: string; year: string }> = {
-  growth: {
-    month: "pri_01m15xs0trk9mmkrd5b7pfr5cw",
-    year: "pri_01m1676haan7wtzgnvbzv364yn",
-  },
-  pro: {
-    month: "pri_01m167efhpd1bhe9pfx24m8fcm",
-    year: "pri_01m167fp4ccv5svj2r01fnk7cr",
-  },
-  enterprise: {
-    month: "pri_01m167hq9j3kncjcs4nfwv86y8",
-    year: "pri_01m167kab9hhetzkwbd96jsj28",
-  },
-};
-
 const plans = [
   {
     key: "growth",
     name: "Growth",
-    monthlyPrice: 19,
-    yearlyPrice: 15,
+    monthlyPrice: RAZORPAY_PLAN_PRICES.growth.month,
+    yearlyPrice: RAZORPAY_PLAN_PRICES.growth.year,
     description: "For small teams scaling up their sales pipeline.",
     features: [
       "500 leads / month",
@@ -63,8 +48,8 @@ const plans = [
   {
     key: "pro",
     name: "Pro",
-    monthlyPrice: 49,
-    yearlyPrice: 39,
+    monthlyPrice: RAZORPAY_PLAN_PRICES.pro.month,
+    yearlyPrice: RAZORPAY_PLAN_PRICES.pro.year,
     description: "The complete prospecting power pack for high-growth agencies.",
     features: [
       "Unlimited AI client searches",
@@ -80,8 +65,8 @@ const plans = [
   {
     key: "enterprise",
     name: "Enterprise",
-    monthlyPrice: 149,
-    yearlyPrice: 119,
+    monthlyPrice: RAZORPAY_PLAN_PRICES.enterprise.month,
+    yearlyPrice: RAZORPAY_PLAN_PRICES.enterprise.year,
     description: "Custom capabilities for enterprise sales teams and agencies.",
     features: [
       "Unlimited everything",
@@ -98,8 +83,6 @@ const plans = [
 export function UpgradeLockOverlay() {
   const [mounted, setMounted] = useState(false);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
-  const [paddle, setPaddle] = useState<any>(null);
-  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const { user, logout, isAuthenticated } = useAuth();
   const { data: org } = useMyOrg();
@@ -134,59 +117,11 @@ export function UpgradeLockOverlay() {
     }
   }, [searchCount, firstLimitReachedAt, isLocked, countdownRemaining, decrementCountdown]);
 
-  // Initialize Paddle if available
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN) {
-      initializePaddle({
-        environment: (process.env.NEXT_PUBLIC_PADDLE_ENV as "sandbox" | "production") || "sandbox",
-        token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
-        eventCallback: (event) => {
-          if (event.name === "checkout.completed") {
-            const plan = (event.data?.custom_data as any)?.plan || "pro";
-            handleUpgradeSuccess(plan);
-          }
-        },
-      }).then((paddleInstance) => {
-        if (paddleInstance) setPaddle(paddleInstance);
-      });
-    }
-  }, []);
-
   const handleUpgradeSuccess = (planKey: string) => {
     unlockWithPlan(planKey);
-    // Invalidate org & subscription queries
     qc.invalidateQueries({ queryKey: ORG_KEYS.me });
     qc.invalidateQueries({ queryKey: SUB_KEYS.status });
-    toast.success(`🎉 Spectacular! Upgraded to ${planKey.toUpperCase()} plan. All features unlocked!`);
-  };
-
-  const handleUpgradeClick = async (planKey: string) => {
-    setIsProcessing(planKey);
-
-    const priceId = PADDLE_PRICE_IDS[planKey]?.[billingInterval];
-    if (paddle && priceId) {
-      try {
-        paddle.Checkout.open({
-          items: [{ priceId, quantity: 1 }],
-          customer: user?.email ? { email: user.email } : undefined,
-          customData: {
-            org_id: org?.id || "",
-            user_id: user?.id || "",
-            plan: planKey,
-          },
-        });
-        setIsProcessing(null);
-        return;
-      } catch (err) {
-        console.warn("Paddle checkout error, falling back to direct unlock", err);
-      }
-    }
-
-    // Direct upgrade / test unlock
-    setTimeout(() => {
-      handleUpgradeSuccess(planKey);
-      setIsProcessing(null);
-    }, 600);
+    toast.success(`🎉 Upgraded to ${planKey.toUpperCase()} plan. All features unlocked!`);
   };
 
   // If user is not authenticated, do not render overlay
@@ -340,7 +275,9 @@ export function UpgradeLockOverlay() {
                   </div>
 
                   <div className="mb-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-foreground">${price}</span>
+                    <span className="text-3xl font-extrabold text-foreground">
+                      {price === 0 ? "Free" : `₹${price.toLocaleString("en-IN")}`}
+                    </span>
                     <span className="text-xs text-muted-foreground">/ month</span>
                   </div>
 
@@ -354,30 +291,23 @@ export function UpgradeLockOverlay() {
                     ))}
                   </ul>
 
-                  {/* Action Button */}
-                  <Button
-                    type="button"
-                    onClick={() => handleUpgradeClick(p.key)}
-                    disabled={isProcessing !== null}
+                  {/* Action Button – Razorpay Checkout */}
+                  <RazorpayButton
+                    plan={p.key}
+                    interval={billingInterval}
+                    amountInRupees={price}
+                    userEmail={user?.email}
+                    userName={user?.full_name || user?.email}
+                    onSuccess={(plan) => handleUpgradeSuccess(plan)}
                     className={cn(
-                      "w-full h-9 text-xs font-semibold gap-1.5 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]",
+                      "w-full h-9 text-xs font-semibold gap-1.5 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center rounded-md",
                       isPro
                         ? "bg-gradient-to-r from-primary to-accent hover:opacity-95 text-white shadow-primary/20"
                         : "bg-muted hover:bg-muted/80 text-foreground border border-border"
                     )}
                   >
-                    {isProcessing === p.key ? (
-                      <>
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        <span>Activating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Upgrade to {p.name}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </>
-                    )}
-                  </Button>
+                    Upgrade to {p.name} <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </RazorpayButton>
                 </div>
               );
             })}

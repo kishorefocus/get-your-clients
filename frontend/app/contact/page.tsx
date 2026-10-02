@@ -99,7 +99,7 @@ export default function ContactPage() {
                   <div className="text-xs text-muted-foreground leading-relaxed">
                     <h3 className="font-semibold text-foreground">GetYourClients, Inc.</h3>
                     <p className="mt-0.5">Web: https://getyourclientsb2b.com</p>
-                    <p>Payments reseller: Paddle.com</p>
+                    <p>Payments processor: Razorpay</p>
                   </div>
                 </div>
               </div>
@@ -172,7 +172,7 @@ export default function ContactPage() {
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       >
                         <option value="General Support">General Support &amp; Product Questions</option>
-                        <option value="Billing &amp; Subscription">Billing &amp; Subscription Help (Paddle)</option>
+                        <option value="Billing &amp; Subscription">Billing &amp; Subscription Help (Razorpay)</option>
                         <option value="Enterprise Sales">Enterprise Sales &amp; Custom Volume</option>
                         <option value="Data &amp; API Integration">Data Coverage &amp; API Integration</option>
                       </select>

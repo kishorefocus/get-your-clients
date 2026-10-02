@@ -3,11 +3,13 @@ import hmac
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-# pyrefly: ignore [missing-import]
-import httpx
+import logging
+import razorpay
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -18,68 +20,35 @@ from app.schemas.subscription import SubscriptionResponse, SubscribeRequest
 
 router = APIRouter(prefix="/api/v1/subscriptions", tags=["subscriptions"])
 
+# ---------------------------------------------------------------------------
+# Razorpay client helper
+# ---------------------------------------------------------------------------
 
-async def cancel_paddle_subscription(subscription_id: str) -> bool:
-    if not settings.paddle_api_key:
-        return False
-    
-    domain = "sandbox-api.paddle.com" if settings.paddle_environment == "sandbox" else "api.paddle.com"
-    url = f"https://{domain}/subscriptions/{subscription_id}/cancel"
-    
-    headers = {
-        "Authorization": f"Bearer {settings.paddle_api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    data = {
-        "effective_from": "immediately"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, headers=headers, json=data)
-            return response.status_code == 200
-        except Exception:
-            return False
+def _get_razorpay_client() -> razorpay.Client:
+    """Return an authenticated Razorpay client. Raises if keys are missing."""
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Razorpay is not configured on this server.",
+        )
+    return razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
 
 
-def verify_paddle_signature(raw_body: bytes, signature_header: str, secret: str) -> bool:
-    try:
-        parts = dict(part.split("=") for part in signature_header.split(";"))
-        timestamp = parts.get("ts")
-        h1 = parts.get("h1")
-    except Exception:
-        return False
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
-    if not timestamp or not h1:
-        return False
-
-    signed_payload = timestamp.encode("utf-8") + b":" + raw_body
-    computed_hash = hmac.new(
-        secret.encode("utf-8"),
-        signed_payload,
-        hashlib.sha256
-    ).hexdigest()
-
-    return hmac.compare_digest(computed_hash, h1)
-
-
-async def fulfill_paddle_checkout(
+async def _fulfill_subscription(
     db: AsyncSession,
-    org_id_str: str,
+    org_id: uuid.UUID,
+    user_id: uuid.UUID | None,
     plan: str,
-    user_id_str: str | None,
-    paddle_sub_id: str | None,
-    paddle_cust_id: str | None,
+    razorpay_payment_id: str | None,
+    razorpay_order_id: str | None,
     billing_interval: str,
-    current_period_end: datetime | None = None
+    current_period_end: datetime | None = None,
 ):
-    try:
-        org_id = uuid.UUID(org_id_str)
-        user_id = uuid.UUID(user_id_str) if user_id_str else None
-    except ValueError:
-        return
-
+    """Upsert a Subscription row and update the parent Organization plan."""
     org = await db.get(Organization, org_id)
     if not org:
         return
@@ -97,8 +66,8 @@ async def fulfill_paddle_checkout(
             plan=plan,
             status="active",
             current_period_end=current_period_end,
-            paddle_subscription_id=paddle_sub_id,
-            paddle_customer_id=paddle_cust_id,
+            razorpay_payment_id=razorpay_payment_id,
+            razorpay_order_id=razorpay_order_id,
             billing_interval=billing_interval,
         )
         db.add(sub)
@@ -106,10 +75,10 @@ async def fulfill_paddle_checkout(
         sub.plan = plan
         sub.status = "active"
         sub.current_period_end = current_period_end
-        sub.paddle_subscription_id = paddle_sub_id
+        sub.razorpay_payment_id = razorpay_payment_id
+        if razorpay_order_id:
+            sub.razorpay_order_id = razorpay_order_id
         sub.billing_interval = billing_interval
-        if paddle_cust_id:
-            sub.paddle_customer_id = paddle_cust_id
         sub.updated_at = datetime.now(timezone.utc)
 
     org.plan = plan
@@ -123,23 +92,26 @@ async def fulfill_paddle_checkout(
         action="subscribe",
         resource_type="subscription",
         resource_id=sub.id,
-        context={"plan": plan, "paddle_subscription_id": paddle_sub_id},
+        context={"plan": plan, "razorpay_payment_id": razorpay_payment_id},
     )
 
     await db.commit()
 
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @router.get("/status", response_model=SubscriptionResponse)
 async def get_subscription_status(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Fetch subscription for the user's organization
+    """Return the current subscription for the user's organisation."""
     stmt = select(Subscription).where(Subscription.org_id == current_user.org_id)
     sub = await db.scalar(stmt)
 
     if sub is None:
-        # Create a default free subscription if it doesn't exist
         sub = Subscription(
             org_id=current_user.org_id,
             plan="free",
@@ -159,49 +131,46 @@ async def subscribe(
     current_user: CurrentUser = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Downgrade to the free plan (cancels active subscription).
+    Paid plan checkouts are initiated client-side via Razorpay checkout.
+    """
     org = await db.get(Organization, current_user.org_id)
     if org is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
-    # Fetch or create subscription
     stmt = select(Subscription).where(Subscription.org_id == current_user.org_id)
     sub = await db.scalar(stmt)
 
     if payload.plan == "free":
-        # Handle cancel/downgrade to free
-        if sub and sub.paddle_subscription_id:
-            await cancel_paddle_subscription(sub.paddle_subscription_id)
-
         if sub is None:
             sub = Subscription(
                 org_id=current_user.org_id,
                 plan="free",
                 status="active",
                 current_period_end=None,
-                paddle_subscription_id=None,
+                razorpay_payment_id=None,
+                razorpay_order_id=None,
             )
             db.add(sub)
         else:
             sub.plan = "free"
             sub.status = "active"
             sub.current_period_end = None
-            sub.paddle_subscription_id = None
+            sub.razorpay_payment_id = None
+            sub.razorpay_order_id = None
             sub.updated_at = datetime.now(timezone.utc)
 
         org.plan = "free"
         org.updated_at = datetime.now(timezone.utc)
-
         await db.commit()
         await db.refresh(sub)
         return sub
 
-    # Paid plans are initiated client-side using Paddle.js overlay
+    # Paid plan checkouts are initiated on the client with the Razorpay JS SDK.
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Subscription checkouts for paid plans must be initiated via the client-side checkout overlay."
+        detail="Paid plan checkouts must be initiated via the client-side Razorpay checkout.",
     )
 
 
@@ -210,18 +179,13 @@ async def cancel_subscription(
     current_user: CurrentUser = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
+    """Cancel the current subscription and revert the org to the free plan."""
     org = await db.get(Organization, current_user.org_id)
     if org is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
     stmt = select(Subscription).where(Subscription.org_id == current_user.org_id)
     sub = await db.scalar(stmt)
-
-    if sub and sub.paddle_subscription_id:
-        await cancel_paddle_subscription(sub.paddle_subscription_id)
 
     if sub is None:
         sub = Subscription(
@@ -229,263 +193,148 @@ async def cancel_subscription(
             plan="free",
             status="active",
             current_period_end=None,
-            paddle_subscription_id=None,
+            razorpay_payment_id=None,
+            razorpay_order_id=None,
         )
         db.add(sub)
     else:
         sub.plan = "free"
         sub.status = "active"
         sub.current_period_end = None
-        sub.paddle_subscription_id = None
+        sub.razorpay_payment_id = None
+        sub.razorpay_order_id = None
         sub.updated_at = datetime.now(timezone.utc)
 
     org.plan = "free"
     org.updated_at = datetime.now(timezone.utc)
-
     await db.commit()
     await db.refresh(sub)
     return sub
 
 
-@router.post("/confirm-payment")
-async def confirm_payment(
-    transaction_id: str,
-    plan: str | None = None,
+# ---------------------------------------------------------------------------
+# Razorpay payment flow
+# ---------------------------------------------------------------------------
+
+class _OrderRequest(SubscribeRequest):
+    """Internal model re-used for the create-order endpoint."""
+    pass
+
+
+from pydantic import BaseModel
+
+
+class CreateOrderRequest(BaseModel):
+    amount: int          # Amount in **paise** (INR smallest unit). e.g. ₹499 → 49900
+    currency: str = "INR"
+    plan: str = "growth"
+    interval: str = "month"
+
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    plan: str = "growth"
+    interval: str = "month"
+
+
+@router.post("/razorpay/create-order")
+async def create_razorpay_order(
+    body: CreateOrderRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """
+    Step 1 – Server-side: create a Razorpay Order.
+    The frontend calls this first, then opens the Razorpay checkout modal.
+    """
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        # Dev fallback: return a mock order so the UI can function without keys.
+        return {
+            "id": "order_mock_development",
+            "amount": body.amount,
+            "currency": body.currency,
+            "plan": body.plan,
+            "interval": body.interval,
+            "mode": "mock",
+        }
+
+    client = _get_razorpay_client()
+    try:
+        order = client.order.create(
+            data={
+                "amount": body.amount,
+                "currency": body.currency,
+                "payment_capture": 1,
+                "notes": {
+                    "org_id": str(current_user.org_id),
+                    "user_id": str(current_user.user_id),
+                    "plan": body.plan,
+                    "interval": body.interval,
+                },
+            }
+        )
+        # Attach plan, interval, and key_id so the frontend has everything needed to initiate checkout
+        order["plan"] = body.plan
+        order["interval"] = body.interval
+        order["key_id"] = settings.razorpay_key_id
+        return order
+    except Exception as e:
+        logger.error(f"Failed to create Razorpay order: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/razorpay/verify-payment")
+async def verify_razorpay_payment(
+    body: VerifyPaymentRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if not settings.paddle_api_key:
-        plan_to_grant = plan or "growth"
-        if plan_to_grant not in ["growth", "pro", "enterprise"]:
-            plan_to_grant = "growth"
+    """
+    Step 2 – Server-side: verify the cryptographic signature returned by Razorpay
+    and then activate the subscription in the database.
+    """
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        # Dev fallback: skip signature check and grant the plan directly.
+        plan = body.plan if body.plan in ["growth", "pro", "enterprise"] else "growth"
+        await _fulfill_subscription(
+            db=db,
+            org_id=current_user.org_id,
+            user_id=current_user.user_id,
+            plan=plan,
+            razorpay_payment_id=body.razorpay_payment_id or "pay_mock_development",
+            razorpay_order_id=body.razorpay_order_id or "order_mock_development",
+            billing_interval=body.interval,
+        )
+        return {"success": True, "plan": plan, "mode": "mock_development"}
 
-        # Dev fallback: automatically upgrade the organization to the selected plan
-        org = await db.get(Organization, current_user.org_id)
-        if org is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Organization not found",
-            )
-        
-        stmt = select(Subscription).where(Subscription.org_id == current_user.org_id)
-        sub = await db.scalar(stmt)
-        
-        current_period_end = datetime.now(timezone.utc) + timedelta(days=30)
-        
-        if sub is None:
-            sub = Subscription(
-                org_id=current_user.org_id,
-                plan=plan_to_grant,
-                status="active",
-                current_period_end=current_period_end,
-                paddle_subscription_id="sub_mock_development",
-                paddle_customer_id="ctm_mock_development",
-                billing_interval="month",
-            )
-            db.add(sub)
-        else:
-            sub.plan = plan_to_grant
-            sub.status = "active"
-            sub.current_period_end = current_period_end
-            sub.paddle_subscription_id = "sub_mock_development"
-            sub.paddle_customer_id = "ctm_mock_development"
-            sub.billing_interval = "month"
-            sub.updated_at = datetime.now(timezone.utc)
-            
-        org.plan = plan_to_grant
-        org.updated_at = datetime.now(timezone.utc)
-        await db.commit()
-        return {"status": "success", "plan": plan_to_grant, "mode": "mock_development"}
+    client = _get_razorpay_client()
 
-    domain = "sandbox-api.paddle.com" if settings.paddle_environment == "sandbox" else "api.paddle.com"
-    url = f"https://{domain}/transactions/{transaction_id}"
-    headers = {
-        "Authorization": f"Bearer {settings.paddle_api_key}",
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url, headers=headers)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to connect to Paddle API: {str(e)}",
-            )
-
-    if response.status_code != 200:
+    # Cryptographic signature verification
+    try:
+        client.utility.verify_payment_signature(
+            {
+                "razorpay_order_id": body.razorpay_order_id,
+                "razorpay_payment_id": body.razorpay_payment_id,
+                "razorpay_signature": body.razorpay_signature,
+            }
+        )
+    except razorpay.errors.SignatureVerificationError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to fetch transaction from Paddle: {response.text}",
+            detail="Payment signature verification failed. Possible tampering detected.",
         )
 
-    tx_data = response.json().get("data", {})
-    if tx_data.get("status") != "completed":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Transaction is not completed (status: {tx_data.get('status')})",
-        )
+    plan = body.plan if body.plan in ["growth", "pro", "enterprise"] else "growth"
 
-    custom_data = tx_data.get("custom_data") or {}
-    org_id_str = custom_data.get("org_id")
-    plan = custom_data.get("plan", "growth")
-    user_id_str = custom_data.get("user_id")
-
-    if not org_id_str or org_id_str != str(current_user.org_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Transaction does not belong to your organization",
-        )
-
-    paddle_sub_id = tx_data.get("subscription_id")
-    paddle_cust_id = tx_data.get("customer_id")
-
-    billing_interval = "month"
-    current_period_end = None
-
-    if paddle_sub_id:
-        sub_url = f"https://{domain}/subscriptions/{paddle_sub_id}"
-        try:
-            async with httpx.AsyncClient() as client:
-                sub_res = await client.get(sub_url, headers=headers)
-                if sub_res.status_code == 200:
-                    sub_data = sub_res.json().get("data", {})
-                    billing_period = sub_data.get("current_billing_period", {})
-                    end_str = billing_period.get("ends_at") or billing_period.get("end")
-                    if end_str:
-                        current_period_end = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
-                    
-                    billing_cycle = sub_data.get("billing_cycle", {})
-                    interval = billing_cycle.get("interval")
-                    if interval in ["month", "year"]:
-                        billing_interval = interval
-        except Exception:
-            pass
-
-    await fulfill_paddle_checkout(
+    await _fulfill_subscription(
         db=db,
-        org_id_str=org_id_str,
+        org_id=current_user.org_id,
+        user_id=current_user.user_id,
         plan=plan,
-        user_id_str=user_id_str,
-        paddle_sub_id=paddle_sub_id,
-        paddle_cust_id=paddle_cust_id,
-        billing_interval=billing_interval,
-        current_period_end=current_period_end,
+        razorpay_payment_id=body.razorpay_payment_id,
+        razorpay_order_id=body.razorpay_order_id,
+        billing_interval=body.interval,
     )
 
-    return {"status": "success", "plan": plan}
-
-
-@router.post("/webhook")
-async def paddle_webhook(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    payload = await request.body()
-    sig_header = request.headers.get("Paddle-Signature")
-
-    if settings.paddle_webhook_secret:
-        if not sig_header:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing Paddle-Signature header",
-            )
-        if not verify_paddle_signature(payload, sig_header, settings.paddle_webhook_secret):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid signature",
-            )
-
-    try:
-        event = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid payload",
-        )
-
-    event_type = event.get("event_type")
-    data = event.get("data", {})
-
-    if event_type == "transaction.completed":
-        custom_data = data.get("custom_data") or {}
-        org_id_str = custom_data.get("org_id")
-        plan = custom_data.get("plan", "growth")
-        user_id_str = custom_data.get("user_id")
-        
-        paddle_sub_id = data.get("subscription_id")
-        paddle_cust_id = data.get("customer_id")
-        
-        billing_interval = "month"
-        try:
-            items = data.get("items", [])
-            if items:
-                interval = items[0].get("price", {}).get("billing_cycle", {}).get("interval")
-                if interval in ["month", "year"]:
-                    billing_interval = interval
-        except Exception:
-            pass
-
-        if org_id_str:
-            await fulfill_paddle_checkout(
-                db=db,
-                org_id_str=org_id_str,
-                plan=plan,
-                user_id_str=user_id_str,
-                paddle_sub_id=paddle_sub_id,
-                paddle_cust_id=paddle_cust_id,
-                billing_interval=billing_interval,
-            )
-
-    elif event_type in ["subscription.updated", "subscription.canceled"]:
-        paddle_sub_id = data.get("id")
-        status_str = data.get("status")
-
-        if paddle_sub_id:
-            stmt = select(Subscription).where(Subscription.paddle_subscription_id == paddle_sub_id)
-            sub = await db.scalar(stmt)
-            if sub:
-                org_id = sub.org_id
-                org = await db.get(Organization, org_id)
-
-                if event_type == "subscription.canceled" or status_str in ["cancelled", "paused"]:
-                    sub.plan = "free"
-                    sub.status = "active"
-                    sub.current_period_end = None
-                    sub.paddle_subscription_id = None
-                    sub.billing_interval = "month"
-                    sub.updated_at = datetime.now(timezone.utc)
-
-                    if org:
-                        org.plan = "free"
-                        org.updated_at = datetime.now(timezone.utc)
-
-                    from app.core.audit import record
-                    await record(
-                        db,
-                        org_id=org_id,
-                        user_id=None,
-                        action="cancel",
-                        resource_type="subscription",
-                        resource_id=sub.id,
-                        context={"plan": "free", "reason": "paddle_subscription_deleted"},
-                    )
-                else:
-                    billing_cycle = data.get("billing_cycle", {})
-                    interval = billing_cycle.get("interval")
-                    if interval in ["month", "year"]:
-                        sub.billing_interval = interval
-
-                    billing_period = data.get("current_billing_period", {})
-                    end_str = billing_period.get("ends_at") or billing_period.get("end")
-                    if end_str:
-                        try:
-                            sub.current_period_end = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
-                        except Exception:
-                            pass
-                    
-                    sub.status = "active"
-                    sub.updated_at = datetime.now(timezone.utc)
-
-                await db.commit()
-
-    return {"status": "success"}
+    return {"success": True, "plan": plan}

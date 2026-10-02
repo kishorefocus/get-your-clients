@@ -22,19 +22,15 @@ export function useSubscriptionStatus() {
 export function useSubscribe() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ plan, interval }: { plan: string; interval: "month" | "year" }) => subscribeToPlan(plan, interval),
+    mutationFn: ({ plan, interval }: { plan: string; interval: "month" | "year" }) =>
+      subscribeToPlan(plan, interval),
     onSuccess: (newSub) => {
       qc.invalidateQueries({ queryKey: SUB_KEYS.status });
       qc.invalidateQueries({ queryKey: ORG_KEYS.me });
-      if (newSub.checkout_url) {
-        window.location.href = newSub.checkout_url;
-      } else {
-        toast.success(`Successfully upgraded to ${newSub.plan} plan!`);
-      }
+      toast.success(`Successfully updated to ${newSub.plan} plan!`);
     },
-
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to upgrade subscription");
+      toast.error(err.message || "Failed to update subscription");
     },
   });
 }
